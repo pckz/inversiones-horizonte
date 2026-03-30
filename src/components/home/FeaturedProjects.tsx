@@ -1,28 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Loader2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
-import type { Project } from '../../types';
+import { ArrowRight } from 'lucide-react';
+import { getFeaturedProjects } from '../../data/mock';
 import ProjectCard from '../ui/ProjectCard';
 
 export default function FeaturedProjects() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchProjects() {
-      const { data } = await supabase
-        .from('projects')
-        .select('*')
-        .in('status', ['Financiando', 'Activo', 'En ejecución'])
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      if (data) setProjects(data);
-      setLoading(false);
-    }
-    fetchProjects();
-  }, []);
+  const projects = useMemo(() => getFeaturedProjects(), []);
 
   return (
     <section className="py-12 sm:py-16 md:py-20 lg:py-28 bg-background relative overflow-hidden">
@@ -53,9 +36,9 @@ export default function FeaturedProjects() {
           </Link>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
+        {projects.length === 0 ? (
+          <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
+            No hay proyectos destacados por ahora.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">

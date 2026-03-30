@@ -35,3 +35,12 @@ export interface FAQ {
   sort_order: number;
   created_at: string;
 }
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  image_url: string | null;
+  attachments: Array<{ name: string; url: string; type: string }>;
+  published_at: string;
+}

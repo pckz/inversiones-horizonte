@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   MapPin, Clock, TrendingUp, Calendar, DollarSign,
-  ArrowLeft, FileText, Shield, Loader2, ChevronRight,
+  ArrowLeft, FileText, Shield, ChevronRight,
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { getProjectBySlug } from '../data/mock';
 import type { Project } from '../types';
 
 function formatCLP(amount: number) {
@@ -76,30 +76,10 @@ function InvestmentSimulator({ project }: { project: Project }) {
 
 export default function ProjectDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchProject() {
-      const { data } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('slug', slug)
-        .maybeSingle();
-
-      if (data) setProject(data);
-      setLoading(false);
-    }
-    fetchProject();
+  const project = useMemo(() => {
+    const found = getProjectBySlug(slug);
+    return found ?? null;
   }, [slug]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-40">
-        <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
-      </div>
-    );
-  }
 
   if (!project) {
     return (

@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Star, Loader2, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
-import type { Testimonial } from '../../types';
+import { useMemo, useState } from 'react';
+import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
+import { getTestimonials } from '../../data/mock';
 
 function Stars({ count }: { count: number }) {
   return (
@@ -17,35 +16,11 @@ function Stars({ count }: { count: number }) {
 }
 
 export default function Testimonials() {
-  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
-  const [loading, setLoading] = useState(true);
+  const testimonials = useMemo(() => getTestimonials(), []);
   const [current, setCurrent] = useState(0);
-
-  useEffect(() => {
-    async function fetchTestimonials() {
-      const { data } = await supabase
-        .from('testimonials')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (data) setTestimonials(data);
-      setLoading(false);
-    }
-    fetchTestimonials();
-  }, []);
 
   const prev = () => setCurrent((c) => (c === 0 ? testimonials.length - 1 : c - 1));
   const next = () => setCurrent((c) => (c === testimonials.length - 1 ? 0 : c + 1));
-
-  if (loading) {
-    return (
-      <section className="py-20 bg-gray-50">
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
-        </div>
-      </section>
-    );
-  }
 
   if (testimonials.length === 0) return null;
 

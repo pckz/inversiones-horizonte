@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { ChevronDown, Loader2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { useMemo, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
+import { getFaqs } from '../../data/mock';
 import type { FAQ } from '../../types';
 
 function FAQItem({ faq, isOpen, toggle }: { faq: FAQ; isOpen: boolean; toggle: () => void }) {
@@ -27,22 +27,8 @@ function FAQItem({ faq, isOpen, toggle }: { faq: FAQ; isOpen: boolean; toggle: (
 }
 
 export default function FAQSection() {
-  const [faqs, setFaqs] = useState<FAQ[]>([]);
-  const [loading, setLoading] = useState(true);
+  const faqs = useMemo(() => getFaqs(), []);
   const [openId, setOpenId] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchFaqs() {
-      const { data } = await supabase
-        .from('faqs')
-        .select('*')
-        .order('sort_order', { ascending: true });
-
-      if (data) setFaqs(data);
-      setLoading(false);
-    }
-    fetchFaqs();
-  }, []);
 
   return (
     <section id="faq" className="py-20 lg:py-28 bg-background">
@@ -58,22 +44,16 @@ export default function FAQSection() {
             </p>
           </div>
 
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {faqs.map((faq) => (
-                <FAQItem
-                  key={faq.id}
-                  faq={faq}
-                  isOpen={openId === faq.id}
-                  toggle={() => setOpenId(openId === faq.id ? null : faq.id)}
-                />
-              ))}
-            </div>
-          )}
+          <div className="space-y-3">
+            {faqs.map((faq) => (
+              <FAQItem
+                key={faq.id}
+                faq={faq}
+                isOpen={openId === faq.id}
+                toggle={() => setOpenId(openId === faq.id ? null : faq.id)}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>

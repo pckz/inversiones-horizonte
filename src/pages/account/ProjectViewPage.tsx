@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { useMemo } from 'react';
+import { getAnnouncements } from '../../data/mock';
 import {
   ArrowLeft,
   MapPin,
@@ -14,15 +14,6 @@ import {
   AlertCircle,
   Paperclip,
 } from 'lucide-react';
-
-interface Announcement {
-  id: string;
-  title: string;
-  content: string;
-  image_url: string | null;
-  attachments: Array<{ name: string; url: string; type: string }>;
-  published_at: string;
-}
 
 const projectData: Record<string, any> = {
   '1': {
@@ -115,30 +106,7 @@ const statusColors: Record<string, string> = {
 export default function ProjectViewPage() {
   const { id } = useParams<{ id: string }>();
   const project = projectData[id || '1'];
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchAnnouncements();
-  }, []);
-
-  const fetchAnnouncements = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('announcements')
-        .select('*')
-        .eq('is_published', true)
-        .order('published_at', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-      setAnnouncements(data || []);
-    } catch (error) {
-      console.error('Error fetching announcements:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const announcements = useMemo(() => getAnnouncements(), []);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -252,11 +220,7 @@ export default function ProjectViewPage() {
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-gray-100 p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-4">Noticias y actualizaciones</h2>
-            {loading ? (
-              <div className="text-center py-8">
-                <p className="text-sm text-gray-500">Cargando...</p>
-              </div>
-            ) : announcements.length === 0 ? (
+            {announcements.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-sm text-gray-500">No hay publicaciones disponibles</p>
               </div>
