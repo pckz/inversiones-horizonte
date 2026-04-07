@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, TrendingUp, Shield, Users, DollarSign, Home, BarChart3 } from 'lucide-react';
+import { ArrowRight, TrendingUp } from 'lucide-react';
 
 export default function Hero() {
   return (
@@ -15,28 +15,6 @@ export default function Hero() {
              style={{ animationDuration: '6s', animationDelay: '1s' }} />
         <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-gradient-to-tl from-blue-400/10 to-brand-300/5 rounded-full blur-3xl animate-pulse"
              style={{ animationDuration: '5s', animationDelay: '2s' }} />
-      </div>
-
-      {/* Iconos flotantes */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-12 animate-float" style={{ animationDelay: '0s', animationDuration: '6s' }}>
-          <TrendingUp className="w-8 h-8 text-brand-400/20" />
-        </div>
-        <div className="absolute top-1/3 right-20 animate-float" style={{ animationDelay: '1s', animationDuration: '7s' }}>
-          <Shield className="w-10 h-10 text-green-400/20" />
-        </div>
-        <div className="absolute bottom-1/4 left-1/4 animate-float" style={{ animationDelay: '2s', animationDuration: '8s' }}>
-          <DollarSign className="w-7 h-7 text-blue-400/20" />
-        </div>
-        <div className="absolute top-1/2 right-1/3 animate-float" style={{ animationDelay: '1.5s', animationDuration: '6.5s' }}>
-          <Home className="w-9 h-9 text-brand-400/15" />
-        </div>
-        <div className="absolute bottom-1/3 right-12 animate-float" style={{ animationDelay: '0.5s', animationDuration: '7.5s' }}>
-          <BarChart3 className="w-8 h-8 text-green-400/15" />
-        </div>
-        <div className="absolute top-20 left-1/3 animate-float" style={{ animationDelay: '2.5s', animationDuration: '6s' }}>
-          <Users className="w-7 h-7 text-blue-400/20" />
-        </div>
       </div>
 
       <div className="relative container-max px-4 sm:px-6 lg:px-8 py-16 sm:py-20 md:py-24 lg:py-32">
