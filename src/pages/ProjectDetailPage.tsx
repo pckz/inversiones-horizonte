@@ -5,6 +5,7 @@ import {
   ArrowLeft, FileText, Shield, ChevronRight,
 } from 'lucide-react';
 import { fetchProjectBySlug } from '../lib/projects';
+import ProjectDetailSkeleton from '../components/ui/ProjectDetailSkeleton';
 import type { Project } from '../types';
 
 function formatCLP(amount: number) {
@@ -43,9 +44,11 @@ function InvestmentSimulator({ project }: { project: Project }) {
 
         <div className="bg-gray-50 rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Rango de rentabilidad estimada</span>
+            <span className="text-gray-500">Rentabilidad estimada</span>
             <span className="font-semibold text-gray-900">
-              {project.estimated_return_min}% - {project.estimated_return_max}%
+              {project.estimated_return_min === project.estimated_return_max
+                ? `${project.estimated_return_min}%`
+                : `${project.estimated_return_min}% - ${project.estimated_return_max}%`}
             </span>
           </div>
           <div className="flex items-center justify-between text-sm">
@@ -88,11 +91,7 @@ export default function ProjectDetailPage() {
   }, [slug]);
 
   if (loading) {
-    return (
-      <div className="container-max section-padding py-20 text-center">
-        <div className="animate-pulse text-gray-400">Cargando proyecto…</div>
-      </div>
-    );
+    return <ProjectDetailSkeleton />;
   }
 
   if (!project) {
@@ -184,7 +183,9 @@ export default function ProjectDetailPage() {
                 <div className="bg-gray-50 rounded-xl p-4 text-center">
                   <TrendingUp className="w-5 h-5 text-brand-500 mx-auto mb-2" />
                   <p className="text-sm font-bold text-gray-900">
-                    {project.estimated_return_min}% - {project.estimated_return_max}%
+                    {project.estimated_return_min === project.estimated_return_max
+                      ? `${project.estimated_return_min}%`
+                      : `${project.estimated_return_min}% - ${project.estimated_return_max}%`}
                   </p>
                   <p className="text-xs text-gray-400">Rentabilidad estimada</p>
                 </div>

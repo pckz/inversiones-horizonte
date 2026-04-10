@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProjectsModule } from './projects/projects.module';
 import { PostsModule } from './projects/posts/posts.module';
+import { UploadsModule } from './uploads/uploads.module';
 import { InvestmentsModule } from './investments/investments.module';
 import { AppController } from './app.controller';
 
@@ -18,6 +19,7 @@ import { AppController } from './app.controller';
     UsersModule,
     ProjectsModule,
     PostsModule,
+    UploadsModule,
     InvestmentsModule,
   ],
   controllers: [AppController],

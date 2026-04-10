@@ -23,7 +23,20 @@ export class PostsService {
         coverImage: dto.coverImage,
         isPublished: dto.isPublished ?? false,
         publishedAt: dto.isPublished ? new Date() : undefined,
+        ...(dto.attachments?.length
+          ? {
+              attachments: {
+                create: dto.attachments.map((a) => ({
+                  title: a.title,
+                  fileUrl: a.fileUrl,
+                  fileType: a.fileType,
+                  fileSize: a.fileSize,
+                })),
+              },
+            }
+          : {}),
       },
+      include: { attachments: true },
     });
   }
 
@@ -34,13 +47,14 @@ export class PostsService {
         ...(onlyPublished ? { isPublished: true } : {}),
       },
       orderBy: { createdAt: 'desc' },
+      include: { attachments: true },
     });
   }
 
   async findById(id: string) {
     const post = await this.prisma.projectPost.findUnique({
       where: { id },
-      include: { project: { select: { title: true, slug: true } } },
+      include: { project: { select: { title: true, slug: true } }, attachments: true },
     });
     if (!post) throw new NotFoundException('Post not found');
     return post;
@@ -50,14 +64,32 @@ export class PostsService {
     const existing = await this.prisma.projectPost.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Post not found');
 
-    const data: any = { ...dto };
+    const { attachments: attachmentDtos, ...rest } = dto;
+    const data: any = { ...rest };
     if (dto.title) {
       data.slug = slugify(dto.title, { lower: true, strict: true });
     }
     if (dto.isPublished && !existing.isPublished) {
       data.publishedAt = new Date();
     }
-    return this.prisma.projectPost.update({ where: { id }, data });
+
+    if (attachmentDtos) {
+      await this.prisma.postAttachment.deleteMany({ where: { postId: id } });
+      data.attachments = {
+        create: attachmentDtos.map((a) => ({
+          title: a.title,
+          fileUrl: a.fileUrl,
+          fileType: a.fileType,
+          fileSize: a.fileSize,
+        })),
+      };
+    }
+
+    return this.prisma.projectPost.update({
+      where: { id },
+      data,
+      include: { attachments: true },
+    });
   }
 
   delete(id: string) {

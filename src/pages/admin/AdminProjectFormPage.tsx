@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import { api } from '../../lib/api';
+import FileUpload from '../../components/ui/FileUpload';
 
 interface ProjectForm {
   title: string;
@@ -217,30 +218,21 @@ export default function AdminProjectFormPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                URL imagen de portada
-              </label>
-              <input
-                type="url"
-                value={form.coverImageUrl}
-                onChange={(e) => set('coverImageUrl', e.target.value)}
-                placeholder="https://..."
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                URL video de portada
-              </label>
-              <input
-                type="url"
-                value={form.coverVideoUrl}
-                onChange={(e) => set('coverVideoUrl', e.target.value)}
-                placeholder="https://youtube.com/..."
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
-              />
-            </div>
+            <FileUpload
+              value={form.coverImageUrl}
+              onChange={(url) => set('coverImageUrl', url)}
+              folder="projects"
+              accept="image/*"
+              label="Imagen de portada"
+            />
+            <FileUpload
+              value={form.coverVideoUrl}
+              onChange={(url) => set('coverVideoUrl', url)}
+              folder="projects"
+              accept="video/*"
+              label="Video de portada"
+              preview={false}
+            />
           </div>
         </section>
 

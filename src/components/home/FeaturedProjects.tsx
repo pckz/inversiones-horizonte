@@ -3,13 +3,18 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { fetchFeaturedProjects } from '../../lib/projects';
 import ProjectCard from '../ui/ProjectCard';
+import ProjectCardSkeleton from '../ui/ProjectCardSkeleton';
 import type { Project } from '../../types';
 
 export default function FeaturedProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchFeaturedProjects().then(setProjects).catch(() => {});
+    fetchFeaturedProjects()
+      .then(setProjects)
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -41,7 +46,13 @@ export default function FeaturedProjects() {
           </Link>
         </div>
 
-        {projects.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {[...Array(3)].map((_, i) => (
+              <ProjectCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : projects.length === 0 ? (
           <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
             No hay proyectos destacados por ahora.
           </div>

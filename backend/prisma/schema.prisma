@@ -150,8 +150,23 @@ model ProjectPost {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
+  attachments     PostAttachment[]
+
   @@unique([projectId, slug])
   @@map("project_posts")
+}
+
+model PostAttachment {
+  id        String      @id @default(uuid())
+  postId    String      @map("post_id")
+  post      ProjectPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  title     String      @db.VarChar(250)
+  fileUrl   String      @map("file_url")
+  fileType  String      @map("file_type") @db.VarChar(80)
+  fileSize  Int         @map("file_size")
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  @@map("post_attachments")
 }
 
 model Investment {

@@ -75,9 +75,11 @@ export default function ProjectCard({ project }: { project: Project }) {
           <div className="flex items-center gap-1.5">
             <TrendingUp className="w-4 h-4 text-success-500" />
             <span className="text-sm font-semibold text-gray-900">
-              {project.estimated_return_min}% - {project.estimated_return_max}%
+              {project.estimated_return_min === project.estimated_return_max
+                ? `${project.estimated_return_min}%`
+                : `${project.estimated_return_min}% - ${project.estimated_return_max}%`}
             </span>
-            <span className="text-xs text-gray-400">rentabilidad estimada</span>
+            <span className="text-xs text-gray-400">rentabilidad est.</span>
           </div>
 
           {remaining !== null && remaining > 0 && (

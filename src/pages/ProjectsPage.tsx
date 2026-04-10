@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { fetchFilteredProjects } from '../lib/projects';
 import ProjectCard from '../components/ui/ProjectCard';
+import ProjectCardSkeleton from '../components/ui/ProjectCardSkeleton';
 import type { Project } from '../types';
 
 const filters = ['Todos', 'En financiamiento', 'Financiado', 'Finalizado'];
@@ -11,11 +12,16 @@ export default function ProjectsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const activeFilter = searchParams.get('status') || 'Todos';
 
   useEffect(() => {
-    fetchFilteredProjects(activeFilter).then(setProjects).catch(() => {});
+    setLoading(true);
+    fetchFilteredProjects(activeFilter)
+      .then(setProjects)
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [activeFilter]);
 
   const filtered = useMemo(() => {
@@ -73,7 +79,13 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {[...Array(6)].map((_, i) => (
+              <ProjectCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-20 px-4">
             <p className="text-gray-400 text-sm sm:text-base lg:text-lg">
               No encontramos proyectos con esos criterios. Prueba cambiando los filtros o la búsqueda.
