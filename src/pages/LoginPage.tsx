@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, Home } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,8 +11,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const { login, register } = useAuth();
+  const { user, login, register } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      const dest = user.role === 'admin' || user.role === 'readonly_admin' ? '/admin' : '/cuenta';
+      navigate(dest, { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,19 +31,6 @@ export default function LoginPage() {
       } else {
         await login(email, password);
       }
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          if (payload.role === 'admin' || payload.role === 'readonly_admin') {
-            navigate('/admin');
-            return;
-          }
-        } catch {
-          // ignore decode errors
-        }
-      }
-      navigate('/cuenta');
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesion');
     } finally {
