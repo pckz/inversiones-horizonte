@@ -1,11 +1,16 @@
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { getFeaturedProjects } from '../../data/mock';
+import { fetchFeaturedProjects } from '../../lib/projects';
 import ProjectCard from '../ui/ProjectCard';
+import type { Project } from '../../types';
 
 export default function FeaturedProjects() {
-  const projects = useMemo(() => getFeaturedProjects(), []);
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  useEffect(() => {
+    fetchFeaturedProjects().then(setProjects).catch(() => {});
+  }, []);
 
   return (
     <section className="py-12 sm:py-16 md:py-20 lg:py-28 bg-background relative overflow-hidden">

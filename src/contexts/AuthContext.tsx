@@ -1,50 +1,101 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { api } from '../lib/api';
 
 interface User {
   id: string;
+  fullName: string;
   name: string;
   email: string;
-  phone: string;
-  rut: string;
-  avatar: string;
+  phone: string | null;
+  taxId: string | null;
+  role: 'admin' | 'readonly_admin' | 'investor';
+  avatar?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => void;
-  register: (name: string, email: string, password: string) => void;
+  isAdmin: boolean;
+  isReadonlyAdmin: boolean;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
-const fakeUser: User = {
-  id: '1',
-  name: 'Carlos Mendoza',
-  email: 'carlos.mendoza@gmail.com',
-  phone: '+56 9 1234 5678',
-  rut: '12.345.678-9',
-  avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-};
-
 const AuthContext = createContext<AuthContextType | null>(null);
+
+function mapUser(raw: any): User {
+  return {
+    id: raw.id,
+    fullName: raw.fullName ?? raw.full_name ?? '',
+    name: raw.fullName ?? raw.full_name ?? '',
+    email: raw.email,
+    phone: raw.phone ?? null,
+    taxId: raw.taxId ?? raw.tax_id ?? null,
+    role: raw.role ?? 'investor',
+    avatar: raw.avatar,
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = (_email: string, _password: string) => {
-    setUser(fakeUser);
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    api
+      .get<any>('/auth/me')
+      .then((data) => {
+        if (data) setUser(mapUser(data));
+      })
+      .catch(() => localStorage.removeItem('auth_token'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const res = await api.post<{ access_token: string; user: any }>('/auth/login', {
+      email,
+      password,
+    });
+    localStorage.setItem('auth_token', res.access_token);
+    const me = await api.get<any>('/auth/me');
+    setUser(mapUser(me));
   };
 
-  const register = (_name: string, _email: string, _password: string) => {
-    setUser(fakeUser);
+  const register = async (name: string, email: string, password: string) => {
+    const res = await api.post<{ access_token: string; user: any }>('/auth/register', {
+      email,
+      password,
+      fullName: name,
+    });
+    localStorage.setItem('auth_token', res.access_token);
+    const me = await api.get<any>('/auth/me');
+    setUser(mapUser(me));
   };
 
   const logout = () => {
+    localStorage.removeItem('auth_token');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isAdmin: user?.role === 'admin',
+        isReadonlyAdmin: user?.role === 'readonly_admin',
+        loading,
+        login,
+        register,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

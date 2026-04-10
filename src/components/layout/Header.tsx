@@ -65,11 +65,17 @@ export default function Header() {
                   className="flex items-center gap-2 pl-3 pr-1 py-1 rounded-full border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
                 >
                   <span className="text-sm font-medium text-gray-700">{user?.name?.split(' ')[0]}</span>
-                  <img
-                    src={user?.avatar}
-                    alt={user?.name}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
+                  {user?.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center text-sm font-semibold">
+                      {user?.name?.charAt(0)?.toUpperCase() || '?'}
+                    </span>
+                  )}
                 </button>
                 {userMenuOpen && (
                   <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 animate-fade-in-up">

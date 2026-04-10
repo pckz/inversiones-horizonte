@@ -92,7 +92,7 @@ export default function AccountPage() {
               </label>
               <input
                 type="tel"
-                defaultValue={user?.phone}
+                defaultValue={user?.phone ?? ''}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
               />
             </div>
@@ -103,7 +103,7 @@ export default function AccountPage() {
               </label>
               <input
                 type="text"
-                defaultValue={user?.rut}
+                defaultValue={user?.taxId ?? ''}
                 readOnly
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed"
               />

@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import DashboardLayout from './components/layout/DashboardLayout';
+import AdminLayout from './components/layout/AdminLayout';
 import HomePage from './pages/HomePage';
 import MarketplacePage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
@@ -14,6 +15,15 @@ import MyProjectsPage from './pages/account/MyProjectsPage';
 import ProjectViewPage from './pages/account/ProjectViewPage';
 import AccountPage from './pages/account/AccountPage';
 import GalleryPage from './pages/account/GalleryPage';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminProjectsPage from './pages/admin/AdminProjectsPage';
+import AdminProjectFormPage from './pages/admin/AdminProjectFormPage';
+import AdminInvestmentsPage from './pages/admin/AdminInvestmentsPage';
+import AdminPaymentsPage from './pages/admin/AdminPaymentsPage';
+import AdminPostsPage from './pages/admin/AdminPostsPage';
+import AdminPostEditorPage from './pages/admin/AdminPostEditorPage';
+import AdminPostPreviewPage from './pages/admin/AdminPostPreviewPage';
 
 function ScrollToAnchor() {
   const location = useLocation();
@@ -33,8 +43,17 @@ function ScrollToAnchor() {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return null;
   if (!isAuthenticated) return <Navigate to="/entrar" replace />;
+  return <>{children}</>;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isAdmin, isReadonlyAdmin, loading } = useAuth();
+  if (loading) return null;
+  if (!isAuthenticated) return <Navigate to="/entrar" replace />;
+  if (!isAdmin && !isReadonlyAdmin) return <Navigate to="/cuenta" replace />;
   return <>{children}</>;
 }
 
@@ -62,6 +81,7 @@ export default function App() {
         <ScrollToAnchor />
         <Routes>
           <Route path="/entrar" element={<LoginPage />} />
+
           <Route
             path="/cuenta"
             element={
@@ -76,6 +96,28 @@ export default function App() {
             <Route path="perfil" element={<AccountPage />} />
             <Route path="galeria" element={<GalleryPage />} />
           </Route>
+
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminLayout />
+              </AdminRoute>
+            }
+          >
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="usuarios" element={<AdminUsersPage />} />
+            <Route path="propiedades" element={<AdminProjectsPage />} />
+            <Route path="propiedades/nuevo" element={<AdminProjectFormPage />} />
+            <Route path="propiedades/:id" element={<AdminProjectFormPage />} />
+            <Route path="propiedades/:projectId/posts" element={<AdminPostsPage />} />
+            <Route path="propiedades/:projectId/posts/nuevo" element={<AdminPostEditorPage />} />
+            <Route path="propiedades/:projectId/posts/:postId" element={<AdminPostEditorPage />} />
+            <Route path="propiedades/:projectId/posts/:postId/preview" element={<AdminPostPreviewPage />} />
+            <Route path="inversiones" element={<AdminInvestmentsPage />} />
+            <Route path="pagos" element={<AdminPaymentsPage />} />
+          </Route>
+
           <Route path="/*" element={<PublicLayout />} />
         </Routes>
       </AuthProvider>

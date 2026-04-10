@@ -1,1 +1,18 @@
 node_modules
+dist
+.env
+.env.local
+
+# Backend
+backend/node_modules
+backend/dist
+backend/.env
+
+# Vercel
+.vercel
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo

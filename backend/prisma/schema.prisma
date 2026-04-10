@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  admin
+  readonly_admin
+  investor
+}
+
+enum ProjectStatus {
+  por_financiarse
+  financiado
+  en_ejecucion
+  terminado
+}
+
+enum InvestmentStatus {
+  pending
+  transfer_pending
+  transfer_review
+  signed
+  active
+  completed
+  cancelled
+}
+
+enum PaymentStatus {
+  pending_review
+  approved
+  rejected
+}
+
+enum DocumentVisibility {
+  public
+  investor
+  internal
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique @db.VarChar(255)
+  passwordHash  String    @map("password_hash") @db.VarChar(255)
+  fullName      String    @map("full_name") @db.VarChar(150)
+  role          UserRole  @default(investor)
+  phone         String?   @db.VarChar(30)
+  taxId         String?   @map("tax_id") @db.VarChar(30)
+  isActive      Boolean   @default(true) @map("is_active")
+  isVerified    Boolean   @default(false) @map("is_verified")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  createdProjects  Project[]         @relation("ProjectCreator")
+  createdUpdates   ProjectUpdate[]   @relation("UpdateCreator")
+  uploadedDocs     ProjectDocument[] @relation("DocUploader")
+  investments      Investment[]
+  reviewedPayments InvestmentPayment[] @relation("PaymentReviewer")
+
+  @@map("users")
+}
+
+model Project {
+  id                         String        @id @default(uuid())
+  slug                       String        @unique @db.VarChar(160)
+  title                      String        @db.VarChar(180)
+  shortDescription           String?       @map("short_description")
+  description                String?
+  status                     ProjectStatus @default(por_financiarse)
+
+  category                   String?       @db.VarChar(80)
+  location                   String?       @db.VarChar(180)
+  targetAmount               Decimal       @map("target_amount") @db.Decimal(14, 2)
+  raisedAmount               Decimal       @default(0) @map("raised_amount") @db.Decimal(14, 2)
+  minInvestmentAmount        Decimal       @map("min_investment_amount") @db.Decimal(14, 2)
+
+  estimatedReturnPct         Decimal?      @map("estimated_return_pct") @db.Decimal(5, 2)
+  estimatedReturnMinPct      Decimal?      @map("estimated_return_min_pct") @db.Decimal(5, 2)
+  estimatedReturnMaxPct      Decimal?      @map("estimated_return_max_pct") @db.Decimal(5, 2)
+  estimatedDurationMonths    Int?          @map("estimated_duration_months")
+  projectedEndDate           DateTime?     @map("projected_end_date") @db.Date
+  startDate                  DateTime?     @map("start_date") @db.Date
+
+  coverImageUrl              String?       @map("cover_image_url")
+  coverVideoUrl              String?       @map("cover_video_url")
+  isPublic                   Boolean       @default(false) @map("is_public")
+  publishedAt                DateTime?     @map("published_at")
+
+  createdById                String?       @map("created_by")
+  createdBy                  User?         @relation("ProjectCreator", fields: [createdById], references: [id])
+  createdAt                  DateTime      @default(now()) @map("created_at")
+  updatedAt                  DateTime      @updatedAt @map("updated_at")
+
+  updates                    ProjectUpdate[]
+  documents                  ProjectDocument[]
+  investments                Investment[]
+  posts                      ProjectPost[]
+
+  @@map("projects")
+}
+
+model ProjectUpdate {
+  id          String    @id @default(uuid())
+  projectId   String    @map("project_id")
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String    @db.VarChar(180)
+  body        String
+  isPublic    Boolean   @default(false) @map("is_public")
+  publishedAt DateTime? @map("published_at")
+  createdById String?   @map("created_by")
+  createdBy   User?     @relation("UpdateCreator", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("project_updates")
+}
+
+model ProjectDocument {
+  id           String             @id @default(uuid())
+  projectId    String             @map("project_id")
+  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title        String             @db.VarChar(180)
+  documentType String             @map("document_type") @db.VarChar(80)
+  fileUrl      String             @map("file_url")
+  visibility   DocumentVisibility @default(investor)
+  sortOrder    Int                @default(0) @map("sort_order")
+  uploadedById String?            @map("uploaded_by")
+  uploadedBy   User?              @relation("DocUploader", fields: [uploadedById], references: [id])
+  createdAt    DateTime           @default(now()) @map("created_at")
+
+  @@map("project_documents")
+}
+
+model ProjectPost {
+  id          String    @id @default(uuid())
+  projectId   String    @map("project_id")
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String    @db.VarChar(250)
+  slug        String    @db.VarChar(280)
+  body        String
+  coverImage  String?   @map("cover_image")
+  isPublished Boolean   @default(false) @map("is_published")
+  sentByEmail Boolean   @default(false) @map("sent_by_email")
+  publishedAt DateTime? @map("published_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([projectId, slug])
+  @@map("project_posts")
+}
+
+model Investment {
+  id                   String           @id @default(uuid())
+  projectId            String           @map("project_id")
+  project              Project          @relation(fields: [projectId], references: [id])
+  userId               String           @map("user_id")
+  user                 User             @relation(fields: [userId], references: [id])
+
+  amount               Decimal          @db.Decimal(14, 2)
+  status               InvestmentStatus @default(pending)
+
+  expectedReturnPct    Decimal?         @map("expected_return_pct") @db.Decimal(5, 2)
+  expectedProfitAmount Decimal?         @map("expected_profit_amount") @db.Decimal(14, 2)
+  expectedTotalAmount  Decimal?         @map("expected_total_amount") @db.Decimal(14, 2)
+
+  adminNotes           String?          @map("admin_notes")
+  requestedAt          DateTime         @default(now()) @map("requested_at")
+  approvedAt           DateTime?        @map("approved_at")
+  completedAt          DateTime?        @map("completed_at")
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+
+  payments             InvestmentPayment[]
+
+  @@map("investments")
+}
+
+model InvestmentPayment {
+  id                String        @id @default(uuid())
+  investmentId      String        @map("investment_id")
+  investment        Investment    @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+
+  amount            Decimal       @db.Decimal(14, 2)
+  paymentMethod     String        @default("bank_transfer") @map("payment_method") @db.VarChar(50)
+  transferReference String?       @map("transfer_reference") @db.VarChar(120)
+  receiptFileUrl    String?       @map("receipt_file_url")
+
+  status            PaymentStatus @default(pending_review)
+  transferredAt     DateTime?     @map("transferred_at")
+  reviewedAt        DateTime?     @map("reviewed_at")
+  reviewedById      String?       @map("reviewed_by")
+  reviewedBy        User?         @relation("PaymentReviewer", fields: [reviewedById], references: [id])
+  reviewNotes       String?       @map("review_notes")
+
+  createdAt         DateTime      @default(now()) @map("created_at")
+
+  @@map("investment_payments")
+}

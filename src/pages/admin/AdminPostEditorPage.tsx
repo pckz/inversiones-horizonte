@@ -1,0 +1,196 @@
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Save, Eye, Edit3 } from 'lucide-react';
+import { api } from '../../lib/api';
+
+export default function AdminPostEditorPage() {
+  const { projectId, postId } = useParams();
+  const navigate = useNavigate();
+  const isEdit = !!postId;
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  const [title, setTitle] = useState('');
+  const [coverImage, setCoverImage] = useState('');
+  const [isPublished, setIsPublished] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(!!postId);
+  const [preview, setPreview] = useState(false);
+  const [projectTitle, setProjectTitle] = useState('');
+
+  useEffect(() => {
+    if (projectId) {
+      api.get<any>(`/projects/${projectId}`).then((p) => setProjectTitle(p.title));
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!postId) return;
+    api
+      .get<any>(`/posts/${postId}`)
+      .then((post) => {
+        setTitle(post.title);
+        setCoverImage(post.coverImage ?? '');
+        setIsPublished(post.isPublished);
+        if (editorRef.current) {
+          editorRef.current.innerHTML = post.body;
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [postId]);
+
+  function execCmd(command: string, value?: string) {
+    document.execCommand(command, false, value);
+    editorRef.current?.focus();
+  }
+
+  async function handleSave() {
+    const body = editorRef.current?.innerHTML ?? '';
+    if (!title.trim() || !body.trim()) return;
+    setSaving(true);
+    try {
+      if (isEdit) {
+        await api.patch(`/posts/${postId}`, {
+          title,
+          body,
+          coverImage: coverImage || undefined,
+          isPublished,
+        });
+      } else {
+        await api.post('/posts', {
+          projectId,
+          title,
+          body,
+          coverImage: coverImage || undefined,
+          isPublished,
+        });
+      }
+      navigate(`/admin/propiedades/${projectId}/posts`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-[#61a5fa] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl">
+      <button
+        onClick={() => navigate(`/admin/propiedades/${projectId}/posts`)}
+        className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-4 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Volver a publicaciones
+      </button>
+
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {isEdit ? 'Editar publicacion' : 'Nueva publicacion'}
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">{projectTitle}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPreview(!preview)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
+          >
+            {preview ? <Edit3 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {preview ? 'Editar' : 'Previsualizar'}
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#61a5fa] text-white rounded-xl text-sm font-semibold hover:bg-blue-500 shadow-lg shadow-[#61a5fa]/25 transition-all disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </div>
+
+      {preview ? (
+        <article className="bg-white rounded-2xl border border-gray-100 p-8 prose prose-sm max-w-none">
+          {coverImage && (
+            <img src={coverImage} alt={title} className="w-full h-64 object-cover rounded-xl mb-6" />
+          )}
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">{title || 'Sin titulo'}</h1>
+          <div dangerouslySetInnerHTML={{ __html: editorRef.current?.innerHTML ?? '' }} />
+        </article>
+      ) : (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Titulo</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Titulo de la publicacion"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Imagen de portada (URL)
+              </label>
+              <input
+                type="url"
+                value={coverImage}
+                onChange={(e) => setCoverImage(e.target.value)}
+                placeholder="https://..."
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
+              />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="flex items-center gap-1 px-4 py-2 border-b border-gray-100 bg-gray-50 flex-wrap">
+              <button type="button" onClick={() => execCmd('bold')} className="px-2.5 py-1.5 rounded text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors">B</button>
+              <button type="button" onClick={() => execCmd('italic')} className="px-2.5 py-1.5 rounded text-sm italic text-gray-600 hover:bg-gray-200 transition-colors">I</button>
+              <button type="button" onClick={() => execCmd('underline')} className="px-2.5 py-1.5 rounded text-sm underline text-gray-600 hover:bg-gray-200 transition-colors">U</button>
+              <div className="w-px h-5 bg-gray-300 mx-1" />
+              <button type="button" onClick={() => execCmd('formatBlock', 'h2')} className="px-2.5 py-1.5 rounded text-sm font-semibold text-gray-600 hover:bg-gray-200 transition-colors">H2</button>
+              <button type="button" onClick={() => execCmd('formatBlock', 'h3')} className="px-2.5 py-1.5 rounded text-sm font-semibold text-gray-600 hover:bg-gray-200 transition-colors">H3</button>
+              <button type="button" onClick={() => execCmd('formatBlock', 'p')} className="px-2.5 py-1.5 rounded text-xs text-gray-600 hover:bg-gray-200 transition-colors">Parrafo</button>
+              <div className="w-px h-5 bg-gray-300 mx-1" />
+              <button type="button" onClick={() => execCmd('insertUnorderedList')} className="px-2.5 py-1.5 rounded text-sm text-gray-600 hover:bg-gray-200 transition-colors">• Lista</button>
+              <button type="button" onClick={() => execCmd('insertOrderedList')} className="px-2.5 py-1.5 rounded text-sm text-gray-600 hover:bg-gray-200 transition-colors">1. Lista</button>
+              <div className="w-px h-5 bg-gray-300 mx-1" />
+              <button type="button" onClick={() => { const url = prompt('URL del enlace:'); if (url) execCmd('createLink', url); }} className="px-2.5 py-1.5 rounded text-sm text-[#61a5fa] hover:bg-gray-200 transition-colors">Link</button>
+              <button type="button" onClick={() => { const url = prompt('URL de la imagen:'); if (url) execCmd('insertImage', url); }} className="px-2.5 py-1.5 rounded text-sm text-gray-600 hover:bg-gray-200 transition-colors">Imagen</button>
+            </div>
+            <div
+              ref={editorRef}
+              contentEditable
+              className="min-h-[400px] px-6 py-4 text-sm text-gray-900 leading-relaxed focus:outline-none prose prose-sm max-w-none"
+              style={{ whiteSpace: 'pre-wrap' }}
+            />
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 p-6">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isPublished}
+                onChange={(e) => setIsPublished(e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 text-[#61a5fa] focus:ring-[#61a5fa]"
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-900">Publicar inmediatamente</p>
+                <p className="text-xs text-gray-500">
+                  Los inversionistas podran ver esta publicacion en su panel
+                </p>
+              </div>
+            </label>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

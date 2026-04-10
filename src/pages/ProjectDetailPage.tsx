@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   MapPin, Clock, TrendingUp, Calendar, DollarSign,
   ArrowLeft, FileText, Shield, ChevronRight,
 } from 'lucide-react';
-import { getProjectBySlug } from '../data/mock';
+import { fetchProjectBySlug } from '../lib/projects';
 import type { Project } from '../types';
 
 function formatCLP(amount: number) {
@@ -76,10 +76,24 @@ function InvestmentSimulator({ project }: { project: Project }) {
 
 export default function ProjectDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const project = useMemo(() => {
-    const found = getProjectBySlug(slug);
-    return found ?? null;
+  const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!slug) { setLoading(false); return; }
+    fetchProjectBySlug(slug)
+      .then(setProject)
+      .catch(() => setProject(null))
+      .finally(() => setLoading(false));
   }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="container-max section-padding py-20 text-center">
+        <div className="animate-pulse text-gray-400">Cargando proyecto…</div>
+      </div>
+    );
+  }
 
   if (!project) {
     return (

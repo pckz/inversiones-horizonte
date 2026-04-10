@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
-import { useMemo } from 'react';
-import { getAnnouncements } from '../../data/mock';
+import { useEffect, useState } from 'react';
+import { api } from '../../lib/api';
 import {
   ArrowLeft,
   MapPin,
@@ -12,8 +12,16 @@ import {
   Download,
   CheckCircle,
   AlertCircle,
-  Paperclip,
 } from 'lucide-react';
+
+interface BlogPost {
+  id: string;
+  title: string;
+  body: string;
+  coverImage: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+}
 
 const projectData: Record<string, any> = {
   '1': {
@@ -106,7 +114,13 @@ const statusColors: Record<string, string> = {
 export default function ProjectViewPage() {
   const { id } = useParams<{ id: string }>();
   const project = projectData[id || '1'];
-  const announcements = useMemo(() => getAnnouncements(), []);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    api.get<BlogPost[]>(`/posts/project/${id}?published=true`).then(setPosts).catch(() => {});
+  }, [id]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -219,53 +233,41 @@ export default function ProjectViewPage() {
 
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-gray-100 p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Noticias y actualizaciones</h2>
-            {announcements.length === 0 ? (
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Publicaciones</h2>
+            {selectedPost ? (
+              <div>
+                <button
+                  onClick={() => setSelectedPost(null)}
+                  className="flex items-center gap-1 text-xs text-brand-500 hover:text-brand-600 mb-4"
+                >
+                  <ArrowLeft className="w-3 h-3" />
+                  Volver
+                </button>
+                {selectedPost.coverImage && (
+                  <img src={selectedPost.coverImage} alt={selectedPost.title} className="w-full h-40 object-cover rounded-lg mb-4" />
+                )}
+                <h3 className="text-base font-bold text-gray-900 mb-1">{selectedPost.title}</h3>
+                <p className="text-xs text-gray-400 mb-4">{formatDate(selectedPost.publishedAt ?? selectedPost.createdAt)}</p>
+                <div className="prose prose-sm max-w-none text-gray-600" dangerouslySetInnerHTML={{ __html: selectedPost.body }} />
+              </div>
+            ) : posts.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-sm text-gray-500">No hay publicaciones disponibles</p>
               </div>
             ) : (
-              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                {announcements.map((announcement) => (
-                  <div
-                    key={announcement.id}
-                    className="border border-gray-100 rounded-xl p-4 hover:border-gray-200 transition-colors"
+              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+                {posts.map((post) => (
+                  <button
+                    key={post.id}
+                    onClick={() => setSelectedPost(post)}
+                    className="w-full text-left border border-gray-100 rounded-xl p-4 hover:border-brand-200 hover:bg-brand-50/30 transition-colors"
                   >
-                    {announcement.image_url && (
-                      <img
-                        src={announcement.image_url}
-                        alt={announcement.title}
-                        className="w-full h-32 object-cover rounded-lg mb-3"
-                      />
+                    {post.coverImage && (
+                      <img src={post.coverImage} alt={post.title} className="w-full h-28 object-cover rounded-lg mb-3" />
                     )}
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="text-sm font-semibold text-gray-900 leading-tight">
-                        {announcement.title}
-                      </h3>
-                      <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
-                        {formatDate(announcement.published_at)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
-                      {announcement.content}
-                    </p>
-                    {announcement.attachments && announcement.attachments.length > 0 && (
-                      <div className="space-y-1">
-                        {announcement.attachments.map((attachment, idx) => (
-                          <a
-                            key={idx}
-                            href={attachment.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 text-xs text-brand-600 hover:text-brand-700 transition-colors"
-                          >
-                            <Paperclip className="w-3 h-3" />
-                            <span className="underline">{attachment.name}</span>
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                    <h3 className="text-sm font-semibold text-gray-900 leading-tight mb-1">{post.title}</h3>
+                    <p className="text-xs text-gray-400">{formatDate(post.publishedAt ?? post.createdAt)}</p>
+                  </button>
                 ))}
               </div>
             )}

@@ -1,18 +1,22 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
-import { getProjects } from '../data/mock';
+import { fetchFilteredProjects } from '../lib/projects';
 import ProjectCard from '../components/ui/ProjectCard';
+import type { Project } from '../types';
 
 const filters = ['Todos', 'En financiamiento', 'Financiado', 'Finalizado'];
 
 export default function ProjectsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
+  const [projects, setProjects] = useState<Project[]>([]);
 
   const activeFilter = searchParams.get('status') || 'Todos';
 
-  const projects = useMemo(() => getProjects(activeFilter), [activeFilter]);
+  useEffect(() => {
+    fetchFilteredProjects(activeFilter).then(setProjects).catch(() => {});
+  }, [activeFilter]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return projects;

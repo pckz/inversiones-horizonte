@@ -9,17 +9,39 @@ export default function LoginPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const { login, register } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isRegister) {
-      register(name, email, password);
-    } else {
-      login(email, password);
+    setError('');
+    setSubmitting(true);
+    try {
+      if (isRegister) {
+        await register(name, email, password);
+      } else {
+        await login(email, password);
+      }
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if (payload.role === 'admin' || payload.role === 'readonly_admin') {
+            navigate('/admin');
+            return;
+          }
+        } catch {
+          // ignore decode errors
+        }
+      }
+      navigate('/cuenta');
+    } catch (err: any) {
+      setError(err.message || 'Error al iniciar sesion');
+    } finally {
+      setSubmitting(false);
     }
-    navigate('/cuenta');
   };
 
   return (
@@ -97,6 +119,11 @@ export default function LoginPage() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-600">
+                {error}
+              </div>
+            )}
             {isRegister && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -161,10 +188,11 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-brand-500 text-white rounded-xl font-semibold hover:bg-brand-600 shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 transition-all duration-300"
+              disabled={submitting}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-brand-500 text-white rounded-xl font-semibold hover:bg-brand-600 shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 transition-all duration-300 disabled:opacity-50"
             >
-              {isRegister ? 'Crear cuenta' : 'Iniciar sesion'}
-              <ArrowRight className="w-5 h-5" />
+              {submitting ? 'Cargando...' : isRegister ? 'Crear cuenta' : 'Iniciar sesion'}
+              {!submitting && <ArrowRight className="w-5 h-5" />}
             </button>
           </form>
 
