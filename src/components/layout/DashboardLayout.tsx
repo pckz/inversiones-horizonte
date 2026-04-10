@@ -10,8 +10,21 @@ import {
   Menu,
   X,
   ChevronLeft,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+
+function Avatar({ name, avatar, size = 'md' }: { name?: string; avatar?: string; size?: 'sm' | 'md' }) {
+  const cls = size === 'sm' ? 'w-8 h-8 text-sm' : 'w-9 h-9 text-sm';
+  if (avatar) {
+    return <img src={avatar} alt={name} className={`${cls} rounded-full object-cover`} />;
+  }
+  return (
+    <span className={`${cls} rounded-full bg-brand-500 text-white flex items-center justify-center font-semibold`}>
+      {name?.charAt(0)?.toUpperCase() || '?'}
+    </span>
+  );
+}
 
 const sidebarLinks = [
   { label: 'Dashboard', href: '/cuenta', icon: LayoutDashboard },
@@ -64,12 +77,17 @@ export default function DashboardLayout() {
         </nav>
 
         <div className="p-4 border-t border-gray-100">
+          {(user?.role === 'admin' || user?.role === 'readonly_admin') && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-500 hover:bg-blue-50 hover:text-[#61a5fa] transition-all w-full mb-1"
+            >
+              <Shield className="w-5 h-5" />
+              Ir a administracion
+            </Link>
+          )}
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
-            <img
-              src={user?.avatar}
-              alt={user?.name}
-              className="w-9 h-9 rounded-full object-cover"
-            />
+            <Avatar name={user?.name} avatar={user?.avatar} />
             <div className="min-w-0">
               <p className="text-sm font-semibold text-gray-900 truncate">{user?.name}</p>
               <p className="text-xs text-gray-500 truncate">{user?.email}</p>
@@ -157,11 +175,7 @@ export default function DashboardLayout() {
               <span className="hidden sm:block text-sm text-gray-600">
                 Hola, <span className="font-semibold text-gray-900">{user?.name?.split(' ')[0]}</span>
               </span>
-              <img
-                src={user?.avatar}
-                alt={user?.name}
-                className="w-8 h-8 rounded-full object-cover ring-2 ring-gray-100"
-              />
+              <Avatar name={user?.name} avatar={user?.avatar} size="sm" />
             </div>
           </div>
         </header>

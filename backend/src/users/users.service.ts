@@ -25,6 +25,33 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
+  findByIdWithDetails(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        phone: true,
+        taxId: true,
+        isActive: true,
+        isVerified: true,
+        lastLoginAt: true,
+        createdAt: true,
+        investments: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            project: {
+              select: { title: true, slug: true, coverImageUrl: true, status: true },
+            },
+            payments: { orderBy: { createdAt: 'desc' } },
+          },
+        },
+      },
+    });
+  }
+
   findAll(params?: { skip?: number; take?: number; role?: string }) {
     return this.prisma.user.findMany({
       where: params?.role ? { role: params.role as any } : undefined,

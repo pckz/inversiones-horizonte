@@ -24,6 +24,7 @@ import AdminPaymentsPage from './pages/admin/AdminPaymentsPage';
 import AdminPostsPage from './pages/admin/AdminPostsPage';
 import AdminPostEditorPage from './pages/admin/AdminPostEditorPage';
 import AdminPostPreviewPage from './pages/admin/AdminPostPreviewPage';
+import AdminUserDetailPage from './pages/admin/AdminUserDetailPage';
 
 function ScrollToAnchor() {
   const location = useLocation();
@@ -107,6 +108,7 @@ export default function App() {
           >
             <Route index element={<AdminDashboardPage />} />
             <Route path="usuarios" element={<AdminUsersPage />} />
+            <Route path="usuarios/:id" element={<AdminUserDetailPage />} />
             <Route path="propiedades" element={<AdminProjectsPage />} />
             <Route path="propiedades/nuevo" element={<AdminProjectFormPage />} />
             <Route path="propiedades/:id" element={<AdminProjectFormPage />} />

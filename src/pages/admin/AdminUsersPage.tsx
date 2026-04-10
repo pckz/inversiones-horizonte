@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Search, UserCheck, UserX, ChevronDown } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Search, UserCheck, UserX, ChevronDown, Eye } from 'lucide-react';
 import { api } from '../../lib/api';
 
 interface User {
@@ -129,10 +130,10 @@ export default function AdminUsersPage() {
                 {filtered.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{user.fullName}</p>
+                      <Link to={`/admin/usuarios/${user.id}`} className="block group">
+                        <p className="text-sm font-medium text-gray-900 group-hover:text-[#61a5fa] transition-colors">{user.fullName}</p>
                         <p className="text-xs text-gray-500">{user.email}</p>
-                      </div>
+                      </Link>
                     </td>
                     <td className="px-6 py-4">
                       <span
@@ -179,24 +180,32 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => toggleActive(user)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                          user.isActive
-                            ? 'text-red-600 hover:bg-red-50'
-                            : 'text-emerald-600 hover:bg-emerald-50'
-                        }`}
-                      >
-                        {user.isActive ? (
-                          <>
-                            <UserX className="w-3.5 h-3.5" /> Desactivar
-                          </>
-                        ) : (
-                          <>
-                            <UserCheck className="w-3.5 h-3.5" /> Activar
-                          </>
-                        )}
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <Link
+                          to={`/admin/usuarios/${user.id}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#61a5fa] hover:bg-blue-50 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Ver
+                        </Link>
+                        <button
+                          onClick={() => toggleActive(user)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            user.isActive
+                              ? 'text-red-600 hover:bg-red-50'
+                              : 'text-emerald-600 hover:bg-emerald-50'
+                          }`}
+                        >
+                          {user.isActive ? (
+                            <>
+                              <UserX className="w-3.5 h-3.5" /> Desactivar
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck className="w-3.5 h-3.5" /> Activar
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
