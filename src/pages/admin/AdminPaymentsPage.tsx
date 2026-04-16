@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Search, Check, X as XIcon, ExternalLink, ChevronDown } from 'lucide-react';
+import { Search, Check, X as XIcon, ExternalLink, ChevronDown, Plus, X } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
+import FileUpload from '../../components/ui/FileUpload';
 
 interface Payment {
   id: string;
@@ -20,22 +22,55 @@ interface Payment {
   reviewedBy: { fullName: string } | null;
 }
 
+interface InvestmentOption {
+  id: string;
+  amount: number;
+  user: { fullName: string; email: string };
+  project: { title: string };
+}
+
+interface CreatePaymentForm {
+  investmentId: string;
+  amount: string;
+  paymentMethod: string;
+  transferReference: string;
+  transferredAt: string;
+  receiptFileUrl: string;
+}
+
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   pending_review: { label: 'Por revisar', color: 'bg-blue-100 text-blue-700' },
   approved: { label: 'Aprobado', color: 'bg-emerald-100 text-emerald-700' },
   rejected: { label: 'Rechazado', color: 'bg-red-100 text-red-700' },
 };
 
+const EMPTY_FORM: CreatePaymentForm = {
+  investmentId: '',
+  amount: '',
+  paymentMethod: 'bank_transfer',
+  transferReference: '',
+  transferredAt: '',
+  receiptFileUrl: '',
+};
+
 export default function AdminPaymentsPage() {
+  const { isReadonlyAdmin } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [investmentOptions, setInvestmentOptions] = useState<InvestmentOption[]>([]);
+  const [createForm, setCreateForm] = useState<CreatePaymentForm>(EMPTY_FORM);
 
   useEffect(() => {
     loadPayments();
+    if (!isReadonlyAdmin) {
+      loadInvestmentOptions();
+    }
   }, []);
 
   async function loadPayments() {
@@ -50,7 +85,17 @@ export default function AdminPaymentsPage() {
     }
   }
 
+  async function loadInvestmentOptions() {
+    try {
+      const data = await api.get<InvestmentOption[]>('/investments/admin');
+      setInvestmentOptions(data);
+    } catch {
+      setInvestmentOptions([]);
+    }
+  }
+
   async function reviewPayment(id: string, status: 'approved' | 'rejected') {
+    if (isReadonlyAdmin) return;
     try {
       await api.patch(`/payments/${id}/review`, { status, reviewNotes: reviewNotes || undefined });
       setPayments((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
@@ -58,6 +103,29 @@ export default function AdminPaymentsPage() {
       setReviewNotes('');
     } catch {
       // handle error
+    }
+  }
+
+  async function createPayment(e: React.FormEvent) {
+    e.preventDefault();
+    if (isReadonlyAdmin) return;
+    try {
+      setCreating(true);
+      await api.post('/payments/admin', {
+        investmentId: createForm.investmentId,
+        amount: Number(createForm.amount),
+        paymentMethod: createForm.paymentMethod || undefined,
+        transferReference: createForm.transferReference || undefined,
+        transferredAt: createForm.transferredAt || undefined,
+        receiptFileUrl: createForm.receiptFileUrl || undefined,
+      });
+      setCreateForm(EMPTY_FORM);
+      setShowCreateForm(false);
+      await loadPayments();
+    } catch {
+      // handle error
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -77,10 +145,104 @@ export default function AdminPaymentsPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Pagos / Transferencias</h1>
-        <p className="text-gray-500 mt-1">Revisa y aprueba comprobantes de transferencia</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Pagos / Transferencias</h1>
+          <p className="text-gray-500 mt-1">Revisa y aprueba comprobantes de transferencia</p>
+        </div>
+        {!isReadonlyAdmin && (
+          <button
+            type="button"
+            onClick={() => setShowCreateForm((prev) => !prev)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#61a5fa] text-white rounded-xl font-semibold hover:bg-blue-500 shadow-lg shadow-[#61a5fa]/25 transition-all"
+          >
+            {showCreateForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {showCreateForm ? 'Cerrar' : 'Registrar pago'}
+          </button>
+        )}
       </div>
+
+      {!isReadonlyAdmin && showCreateForm && (
+        <form onSubmit={createPayment} className="mb-6 bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Inversion</label>
+              <select
+                required
+                value={createForm.investmentId}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, investmentId: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
+              >
+                <option value="">Selecciona una inversion</option>
+                {investmentOptions.map((investment) => (
+                  <option key={investment.id} value={investment.id}>
+                    {investment.user.fullName} · {investment.project.title} · {fmt(Number(investment.amount))}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Monto</label>
+              <input
+                type="number"
+                required
+                min={1}
+                value={createForm.amount}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, amount: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Metodo de pago</label>
+              <input
+                type="text"
+                value={createForm.paymentMethod}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, paymentMethod: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Referencia</label>
+              <input
+                type="text"
+                value={createForm.transferReference}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({ ...prev, transferReference: e.target.value }))
+                }
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Fecha de transferencia</label>
+              <input
+                type="date"
+                value={createForm.transferredAt}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, transferredAt: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
+              />
+            </div>
+            <FileUpload
+              value={createForm.receiptFileUrl}
+              onChange={(url) => setCreateForm((prev) => ({ ...prev, receiptFileUrl: url }))}
+              folder="payment-receipts"
+              accept="image/*,.pdf"
+              label="Comprobante"
+              preview={false}
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={creating}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#61a5fa] text-white rounded-xl font-semibold hover:bg-blue-500 transition-all disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+              {creating ? 'Registrando...' : 'Registrar pago'}
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         <div className="p-4 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
@@ -181,7 +343,7 @@ export default function AdminPaymentsPage() {
                         {fmtDate(payment.createdAt)}
                       </td>
                       <td className="px-6 py-4">
-                        {payment.status === 'pending_review' ? (
+                        {!isReadonlyAdmin && payment.status === 'pending_review' ? (
                           reviewingId === payment.id ? (
                             <div className="flex flex-col gap-2 min-w-[200px]">
                               <input
@@ -225,7 +387,13 @@ export default function AdminPaymentsPage() {
                           )
                         ) : (
                           <span className="text-xs text-gray-400">
-                            {payment.reviewedBy ? `Por ${payment.reviewedBy.fullName}` : '—'}
+                            {isReadonlyAdmin
+                              ? payment.reviewedBy
+                                ? `Por ${payment.reviewedBy.fullName}`
+                                : 'Solo lectura'
+                              : payment.reviewedBy
+                                ? `Por ${payment.reviewedBy.fullName}`
+                                : '—'}
                           </span>
                         )}
                       </td>

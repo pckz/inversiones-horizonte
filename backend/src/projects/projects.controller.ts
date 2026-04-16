@@ -28,14 +28,14 @@ export class ProjectsController {
 
   @Get('admin')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin' as any)
+  @Roles('admin' as any, 'readonly_admin' as any)
   findAllAdmin() {
     return this.projects.findAllAdmin();
   }
 
   @Get('stats')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin' as any)
+  @Roles('admin' as any, 'readonly_admin' as any)
   getStats() {
     return this.projects.getStats();
   }

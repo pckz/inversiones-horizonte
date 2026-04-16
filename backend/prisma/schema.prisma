@@ -53,6 +53,7 @@ model User {
   taxId         String?   @map("tax_id") @db.VarChar(30)
   isActive      Boolean   @default(true) @map("is_active")
   isVerified    Boolean   @default(false) @map("is_verified")
+  verificationReminderSentAt DateTime? @map("verification_reminder_sent_at")
   lastLoginAt   DateTime? @map("last_login_at")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -81,8 +82,6 @@ model Project {
   minInvestmentAmount        Decimal       @map("min_investment_amount") @db.Decimal(14, 2)
 
   estimatedReturnPct         Decimal?      @map("estimated_return_pct") @db.Decimal(5, 2)
-  estimatedReturnMinPct      Decimal?      @map("estimated_return_min_pct") @db.Decimal(5, 2)
-  estimatedReturnMaxPct      Decimal?      @map("estimated_return_max_pct") @db.Decimal(5, 2)
   estimatedDurationMonths    Int?          @map("estimated_duration_months")
   projectedEndDate           DateTime?     @map("projected_end_date") @db.Date
   startDate                  DateTime?     @map("start_date") @db.Date
@@ -215,4 +214,12 @@ model InvestmentPayment {
   createdAt         DateTime      @default(now()) @map("created_at")
 
   @@map("investment_payments")
+}
+
+model Setting {
+  key       String   @id @db.VarChar(100)
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
 }

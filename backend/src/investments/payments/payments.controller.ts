@@ -23,21 +23,21 @@ export class PaymentsController {
 
   @Get('admin')
   @UseGuards(RolesGuard)
-  @Roles('admin' as any)
+  @Roles('admin' as any, 'readonly_admin' as any)
   findAllAdmin() {
     return this.payments.findAllAdmin();
   }
 
   @Get('pending')
   @UseGuards(RolesGuard)
-  @Roles('admin' as any)
+  @Roles('admin' as any, 'readonly_admin' as any)
   findPending() {
     return this.payments.findAllPending();
   }
 
   @Get('stats')
   @UseGuards(RolesGuard)
-  @Roles('admin' as any)
+  @Roles('admin' as any, 'readonly_admin' as any)
   getStats() {
     return this.payments.getStats();
   }
@@ -48,7 +48,16 @@ export class PaymentsController {
   }
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles('investor' as any)
   create(@Body() dto: CreatePaymentDto) {
+    return this.payments.create(dto);
+  }
+
+  @Post('admin')
+  @UseGuards(RolesGuard)
+  @Roles('admin' as any)
+  createAdmin(@Body() dto: CreatePaymentDto) {
     return this.payments.create(dto);
   }
 

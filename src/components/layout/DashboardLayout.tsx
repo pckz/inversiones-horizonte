@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
-  Building2,
   LayoutDashboard,
   FolderOpen,
   User,
@@ -52,10 +51,9 @@ export default function DashboardLayout() {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <aside className="hidden lg:flex lg:flex-col lg:w-64 bg-white border-r border-gray-100 fixed inset-y-0 left-0 z-40">
-        <div className="p-6 border-b border-gray-100">
-          <Link to="/" className="flex items-center gap-2">
-            <Building2 className="w-7 h-7 text-brand-500" />
-            <span className="text-lg font-bold text-gray-900">Horizonte</span>
+        <div className="p-5 border-b border-gray-100">
+          <Link to="/">
+            <img src="/brand/horizonte-logo.svg" alt="Inversiones Horizonte" className="h-10 w-auto object-contain" />
           </Link>
         </div>
 
@@ -110,10 +108,9 @@ export default function DashboardLayout() {
             onClick={() => setSidebarOpen(false)}
           />
           <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-2xl flex flex-col animate-fade-in-up">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <Link to="/" className="flex items-center gap-2">
-                <Building2 className="w-7 h-7 text-brand-500" />
-                <span className="text-lg font-bold text-gray-900">Horizonte</span>
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <Link to="/">
+                <img src="/brand/horizonte-logo.svg" alt="Inversiones Horizonte" className="h-10 w-auto object-contain" />
               </Link>
               <button
                 onClick={() => setSidebarOpen(false)}

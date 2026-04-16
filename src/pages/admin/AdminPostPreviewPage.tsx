@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface PostDetail {
   id: string;
@@ -16,6 +17,7 @@ interface PostDetail {
 }
 
 export default function AdminPostPreviewPage() {
+  const { isReadonlyAdmin } = useAuth();
   const { projectId, postId } = useParams();
   const navigate = useNavigate();
   const [post, setPost] = useState<PostDetail | null>(null);
@@ -30,6 +32,7 @@ export default function AdminPostPreviewPage() {
   }, [postId]);
 
   async function handlePublishEmail() {
+    if (isReadonlyAdmin) return;
     if (!post || !confirm('¿Publicar y enviar por email a los inversionistas?')) return;
     const result = await api.post<{ sent: number }>(`/posts/${post.id}/publish-email`, {});
     setPost({ ...post, isPublished: true, sentByEmail: true, publishedAt: new Date().toISOString() });
@@ -59,7 +62,7 @@ export default function AdminPostPreviewPage() {
           <ArrowLeft className="w-4 h-4" />
           Volver
         </button>
-        {!post.sentByEmail && (
+        {!isReadonlyAdmin && !post.sentByEmail && (
           <button
             onClick={handlePublishEmail}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#61a5fa] text-white rounded-xl text-sm font-semibold hover:bg-blue-500 shadow-lg shadow-[#61a5fa]/25 transition-all"

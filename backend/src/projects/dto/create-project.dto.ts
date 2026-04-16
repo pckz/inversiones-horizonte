@@ -47,14 +47,6 @@ export class CreateProjectDto {
 
   @IsOptional()
   @IsNumber()
-  estimatedReturnMinPct?: number;
-
-  @IsOptional()
-  @IsNumber()
-  estimatedReturnMaxPct?: number;
-
-  @IsOptional()
-  @IsNumber()
   estimatedDurationMonths?: number;
 
   @IsOptional()

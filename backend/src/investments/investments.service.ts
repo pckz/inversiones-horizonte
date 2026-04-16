@@ -21,8 +21,8 @@ export class InvestmentsService {
     private mail: MailService,
   ) {}
 
-  create(dto: CreateInvestmentDto, userId: string) {
-    return this.prisma.investment.create({
+  async create(dto: CreateInvestmentDto, userId: string) {
+    const investment = await this.prisma.investment.create({
       data: {
         projectId: dto.projectId,
         userId,
@@ -31,7 +31,38 @@ export class InvestmentsService {
         expectedProfitAmount: dto.expectedProfitAmount,
         expectedTotalAmount: dto.expectedTotalAmount,
       },
+      include: {
+        user: { select: { fullName: true, email: true } },
+        project: { select: { title: true } },
+      },
     });
+
+    this.mail
+      .sendInvestmentCreated(
+        investment.user.email,
+        investment.user.fullName,
+        investment.project.title,
+        Number(dto.amount),
+      )
+      .catch(() => {});
+
+    const admins = await this.prisma.user.findMany({
+      where: { role: 'admin' },
+      select: { email: true },
+    });
+    for (const admin of admins) {
+      this.mail
+        .sendNewInvestmentAdmin(
+          admin.email,
+          investment.user.fullName,
+          investment.user.email,
+          investment.project.title,
+          Number(dto.amount),
+        )
+        .catch(() => {});
+    }
+
+    return investment;
   }
 
   findAllAdmin() {
@@ -50,8 +81,25 @@ export class InvestmentsService {
       where: { userId },
       orderBy: { createdAt: 'desc' },
       include: {
-        project: { select: { title: true, slug: true, coverImageUrl: true } },
-        payments: true,
+        project: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            coverImageUrl: true,
+            status: true,
+            category: true,
+            location: true,
+            description: true,
+            estimatedReturnPct: true,
+            estimatedDurationMonths: true,
+            startDate: true,
+            projectedEndDate: true,
+            targetAmount: true,
+            raisedAmount: true,
+          },
+        },
+        payments: { orderBy: { createdAt: 'desc' } },
       },
     });
   }

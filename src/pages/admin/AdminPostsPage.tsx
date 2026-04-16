@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Plus, Send, Eye, Trash2, Edit3 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Post {
   id: string;
@@ -23,6 +24,7 @@ interface ProjectInfo {
 }
 
 export default function AdminPostsPage() {
+  const { isReadonlyAdmin } = useAuth();
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -43,12 +45,14 @@ export default function AdminPostsPage() {
   }, [projectId]);
 
   async function handleDelete(id: string) {
+    if (isReadonlyAdmin) return;
     if (!confirm('¿Eliminar esta publicacion?')) return;
     await api.delete(`/posts/${id}`);
     setPosts((prev) => prev.filter((p) => p.id !== id));
   }
 
   async function handlePublishEmail(id: string) {
+    if (isReadonlyAdmin) return;
     if (!confirm('¿Publicar y enviar por email a los inversionistas?')) return;
     await api.post(`/posts/${id}/publish-email`, {});
     setPosts((prev) =>
@@ -84,13 +88,15 @@ export default function AdminPostsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Publicaciones</h1>
           <p className="text-gray-500 mt-1">{project?.title}</p>
         </div>
-        <Link
-          to={`/admin/propiedades/${projectId}/posts/nuevo`}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#61a5fa] text-white rounded-xl text-sm font-semibold hover:bg-blue-500 shadow-lg shadow-[#61a5fa]/25 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          Nueva publicacion
-        </Link>
+        {!isReadonlyAdmin && (
+          <Link
+            to={`/admin/propiedades/${projectId}/posts/nuevo`}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#61a5fa] text-white rounded-xl text-sm font-semibold hover:bg-blue-500 shadow-lg shadow-[#61a5fa]/25 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Nueva publicacion
+          </Link>
+        )}
       </div>
 
       {posts.length === 0 ? (
@@ -130,14 +136,16 @@ export default function AdminPostsPage() {
                 >
                   <Eye className="w-4 h-4" />
                 </Link>
-                <Link
-                  to={`/admin/propiedades/${projectId}/posts/${post.id}`}
-                  className="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                  title="Editar"
-                >
-                  <Edit3 className="w-4 h-4" />
-                </Link>
-                {!post.sentByEmail && (
+                {!isReadonlyAdmin && (
+                  <Link
+                    to={`/admin/propiedades/${projectId}/posts/${post.id}`}
+                    className="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                    title="Editar"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </Link>
+                )}
+                {!isReadonlyAdmin && !post.sentByEmail && (
                   <button
                     onClick={() => handlePublishEmail(post.id)}
                     className="p-2 rounded-lg text-[#61a5fa] hover:bg-blue-50 transition-colors"
@@ -146,13 +154,15 @@ export default function AdminPostsPage() {
                     <Send className="w-4 h-4" />
                   </button>
                 )}
-                <button
-                  onClick={() => handleDelete(post.id)}
-                  className="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  title="Eliminar"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {!isReadonlyAdmin && (
+                  <button
+                    onClick={() => handleDelete(post.id)}
+                    className="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           ))}

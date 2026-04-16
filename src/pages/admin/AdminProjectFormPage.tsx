@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import { api } from '../../lib/api';
 import FileUpload from '../../components/ui/FileUpload';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ProjectForm {
   title: string;
@@ -14,8 +15,6 @@ interface ProjectForm {
   targetAmount: string;
   minInvestmentAmount: string;
   estimatedReturnPct: string;
-  estimatedReturnMinPct: string;
-  estimatedReturnMaxPct: string;
   estimatedDurationMonths: string;
   projectedEndDate: string;
   startDate: string;
@@ -34,8 +33,6 @@ const EMPTY: ProjectForm = {
   targetAmount: '',
   minInvestmentAmount: '',
   estimatedReturnPct: '',
-  estimatedReturnMinPct: '',
-  estimatedReturnMaxPct: '',
   estimatedDurationMonths: '',
   projectedEndDate: '',
   startDate: '',
@@ -45,6 +42,7 @@ const EMPTY: ProjectForm = {
 };
 
 export default function AdminProjectFormPage() {
+  const { isReadonlyAdmin } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const [form, setForm] = useState<ProjectForm>(EMPTY);
@@ -67,8 +65,6 @@ export default function AdminProjectFormPage() {
           targetAmount: p.targetAmount?.toString() ?? '',
           minInvestmentAmount: p.minInvestmentAmount?.toString() ?? '',
           estimatedReturnPct: p.estimatedReturnPct?.toString() ?? '',
-          estimatedReturnMinPct: p.estimatedReturnMinPct?.toString() ?? '',
-          estimatedReturnMaxPct: p.estimatedReturnMaxPct?.toString() ?? '',
           estimatedDurationMonths: p.estimatedDurationMonths?.toString() ?? '',
           projectedEndDate: p.projectedEndDate?.split('T')[0] ?? '',
           startDate: p.startDate?.split('T')[0] ?? '',
@@ -85,6 +81,7 @@ export default function AdminProjectFormPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isReadonlyAdmin) return;
     setSaving(true);
     try {
       const body: any = {
@@ -97,8 +94,6 @@ export default function AdminProjectFormPage() {
         targetAmount: parseFloat(form.targetAmount),
         minInvestmentAmount: parseFloat(form.minInvestmentAmount),
         estimatedReturnPct: form.estimatedReturnPct ? parseFloat(form.estimatedReturnPct) : undefined,
-        estimatedReturnMinPct: form.estimatedReturnMinPct ? parseFloat(form.estimatedReturnMinPct) : undefined,
-        estimatedReturnMaxPct: form.estimatedReturnMaxPct ? parseFloat(form.estimatedReturnMaxPct) : undefined,
         estimatedDurationMonths: form.estimatedDurationMonths
           ? parseInt(form.estimatedDurationMonths)
           : undefined,
@@ -145,6 +140,13 @@ export default function AdminProjectFormPage() {
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-8">
+        {isReadonlyAdmin && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl px-4 py-3 text-sm">
+            Este perfil solo puede revisar propiedades. Los cambios estan deshabilitados.
+          </div>
+        )}
+
+        <fieldset disabled={isReadonlyAdmin} className={`space-y-8 ${isReadonlyAdmin ? 'opacity-70' : ''}`}>
         <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
           <h2 className="text-lg font-semibold text-gray-900">Informacion general</h2>
 
@@ -280,30 +282,6 @@ export default function AdminProjectFormPage() {
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Retorno minimo (%)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={form.estimatedReturnMinPct}
-                onChange={(e) => set('estimatedReturnMinPct', e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Retorno maximo (%)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={form.estimatedReturnMaxPct}
-                onChange={(e) => set('estimatedReturnMaxPct', e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
-              />
-            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -361,16 +339,19 @@ export default function AdminProjectFormPage() {
           </label>
         </section>
 
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#61a5fa] text-white rounded-xl font-semibold hover:bg-blue-500 shadow-lg shadow-[#61a5fa]/25 transition-all disabled:opacity-50"
-          >
-            <Save className="w-5 h-5" />
-            {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear propiedad'}
-          </button>
-        </div>
+        {!isReadonlyAdmin && (
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#61a5fa] text-white rounded-xl font-semibold hover:bg-blue-500 shadow-lg shadow-[#61a5fa]/25 transition-all disabled:opacity-50"
+            >
+              <Save className="w-5 h-5" />
+              {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear propiedad'}
+            </button>
+          </div>
+        )}
+        </fieldset>
       </form>
     </div>
   );

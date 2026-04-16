@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 const mainLinks = [
   { label: 'Inicio', href: '/' },
   { label: 'Ver proyectos', href: '/proyectos' },
-  { label: 'Agendar reunión', href: '#' },
+  { label: 'Agendar reunión', href: '/agendar' },
 ];
 
 export default function Header() {

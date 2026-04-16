@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { InvestmentsService } from './investments.service';
+import { CreateAdminInvestmentDto } from './dto/create-admin-investment.dto';
 import { CreateInvestmentDto } from './dto/create-investment.dto';
 import { UpdateInvestmentStatusDto } from './dto/update-investment-status.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -23,14 +24,14 @@ export class InvestmentsController {
 
   @Get('admin')
   @UseGuards(RolesGuard)
-  @Roles('admin' as any)
+  @Roles('admin' as any, 'readonly_admin' as any)
   findAllAdmin() {
     return this.investments.findAllAdmin();
   }
 
   @Get('stats')
   @UseGuards(RolesGuard)
-  @Roles('admin' as any)
+  @Roles('admin' as any, 'readonly_admin' as any)
   getStats() {
     return this.investments.getStats();
   }
@@ -46,8 +47,17 @@ export class InvestmentsController {
   }
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles('investor' as any)
   create(@Body() dto: CreateInvestmentDto, @CurrentUser('sub') userId: string) {
     return this.investments.create(dto, userId);
+  }
+
+  @Post('admin')
+  @UseGuards(RolesGuard)
+  @Roles('admin' as any)
+  createAdmin(@Body() dto: CreateAdminInvestmentDto) {
+    return this.investments.create(dto, dto.userId);
   }
 
   @Patch(':id/status')

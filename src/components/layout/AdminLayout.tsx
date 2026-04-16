@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
-  Building2,
   LayoutDashboard,
   Users,
   FolderKanban,
   TrendingUp,
   Receipt,
+  Settings,
   LogOut,
   Menu,
   X,
@@ -21,6 +21,7 @@ const sidebarLinks = [
   { label: 'Propiedades', href: '/admin/propiedades', icon: FolderKanban },
   { label: 'Inversiones', href: '/admin/inversiones', icon: TrendingUp },
   { label: 'Pagos', href: '/admin/pagos', icon: Receipt },
+  { label: 'Preferencias', href: '/admin/preferencias', icon: Settings },
 ];
 
 export default function AdminLayout() {
@@ -42,11 +43,10 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <aside className="hidden lg:flex lg:flex-col lg:w-64 bg-gray-900 fixed inset-y-0 left-0 z-40">
-        <div className="p-6 border-b border-gray-800">
-          <Link to="/admin" className="flex items-center gap-2">
-            <Building2 className="w-7 h-7 text-[#61a5fa]" />
-            <span className="text-lg font-bold text-white">Horizonte</span>
-            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-[#61a5fa]/20 text-[#61a5fa] rounded">
+        <div className="p-5 border-b border-gray-800">
+          <Link to="/admin" className="flex items-center gap-3">
+            <img src="/brand/logo-blanco.svg" alt="Inversiones Horizonte" className="h-9 w-auto object-contain" />
+            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#61a5fa]/20 text-[#61a5fa] rounded">
               ADMIN
             </span>
           </Link>
@@ -103,10 +103,10 @@ export default function AdminLayout() {
             onClick={() => setSidebarOpen(false)}
           />
           <aside className="absolute left-0 top-0 bottom-0 w-72 bg-gray-900 shadow-2xl flex flex-col animate-fade-in-up">
-            <div className="p-6 border-b border-gray-800 flex items-center justify-between">
-              <Link to="/admin" className="flex items-center gap-2">
-                <Building2 className="w-7 h-7 text-[#61a5fa]" />
-                <span className="text-lg font-bold text-white">Admin</span>
+            <div className="p-5 border-b border-gray-800 flex items-center justify-between">
+              <Link to="/admin" className="flex items-center gap-3">
+                <img src="/brand/logo-blanco.svg" alt="Inversiones Horizonte" className="h-9 w-auto object-contain" />
+                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#61a5fa]/20 text-[#61a5fa] rounded">ADMIN</span>
               </Link>
               <button
                 onClick={() => setSidebarOpen(false)}

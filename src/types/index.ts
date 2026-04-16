@@ -10,8 +10,7 @@ export interface Project {
   target_amount: number;
   raised_amount: number;
   min_investment: number;
-  estimated_return_min: number;
-  estimated_return_max: number;
+  estimated_return: number;
   annual_return: number;
   duration_months: number;
   deadline: string | null;

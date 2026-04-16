@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Search, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown, Plus, X } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Investment {
   id: string;
@@ -12,6 +13,22 @@ interface Investment {
   user: { fullName: string; email: string };
   project: { title: string; slug: string };
   _count: { payments: number };
+}
+
+interface SelectOption {
+  id: string;
+  fullName?: string;
+  email?: string;
+  title?: string;
+}
+
+interface CreateInvestmentForm {
+  userId: string;
+  projectId: string;
+  amount: string;
+  expectedReturnPct: string;
+  expectedProfitAmount: string;
+  expectedTotalAmount: string;
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -32,14 +49,33 @@ const TRANSITIONS: Record<string, string[]> = {
   active: ['completed'],
 };
 
+const EMPTY_FORM: CreateInvestmentForm = {
+  userId: '',
+  projectId: '',
+  amount: '',
+  expectedReturnPct: '',
+  expectedProfitAmount: '',
+  expectedTotalAmount: '',
+};
+
 export default function AdminInvestmentsPage() {
+  const { isReadonlyAdmin } = useAuth();
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [users, setUsers] = useState<SelectOption[]>([]);
+  const [projects, setProjects] = useState<SelectOption[]>([]);
+  const [createForm, setCreateForm] = useState<CreateInvestmentForm>(EMPTY_FORM);
 
   useEffect(() => {
     loadInvestments();
+    if (!isReadonlyAdmin) {
+      loadOptions();
+    }
   }, []);
 
   async function loadInvestments() {
@@ -54,14 +90,61 @@ export default function AdminInvestmentsPage() {
     }
   }
 
-  async function changeStatus(inv: Investment, newStatus: string) {
+  async function loadOptions() {
     try {
+      const [userData, projectData] = await Promise.all([
+        api.get<SelectOption[]>('/users?role=investor'),
+        api.get<SelectOption[]>('/projects/admin'),
+      ]);
+      setUsers(userData);
+      setProjects(projectData);
+    } catch {
+      setUsers([]);
+      setProjects([]);
+    }
+  }
+
+  async function changeStatus(inv: Investment, newStatus: string) {
+    if (isReadonlyAdmin) return;
+    try {
+      setSavingId(inv.id);
       await api.patch(`/investments/${inv.id}/status`, { status: newStatus });
       setInvestments((prev) =>
         prev.map((i) => (i.id === inv.id ? { ...i, status: newStatus } : i)),
       );
     } catch {
       // handle error
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function createInvestment(e: React.FormEvent) {
+    e.preventDefault();
+    if (isReadonlyAdmin) return;
+    try {
+      setCreating(true);
+      await api.post('/investments/admin', {
+        userId: createForm.userId,
+        projectId: createForm.projectId,
+        amount: Number(createForm.amount),
+        expectedReturnPct: createForm.expectedReturnPct
+          ? Number(createForm.expectedReturnPct)
+          : undefined,
+        expectedProfitAmount: createForm.expectedProfitAmount
+          ? Number(createForm.expectedProfitAmount)
+          : undefined,
+        expectedTotalAmount: createForm.expectedTotalAmount
+          ? Number(createForm.expectedTotalAmount)
+          : undefined,
+      });
+      setCreateForm(EMPTY_FORM);
+      setShowCreateForm(false);
+      await loadInvestments();
+    } catch {
+      // handle error
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -80,10 +163,117 @@ export default function AdminInvestmentsPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Inversiones</h1>
-        <p className="text-gray-500 mt-1">Gestiona las inversiones y sus estados</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Inversiones</h1>
+          <p className="text-gray-500 mt-1">Gestiona las inversiones y sus estados</p>
+        </div>
+        {!isReadonlyAdmin && (
+          <button
+            type="button"
+            onClick={() => setShowCreateForm((prev) => !prev)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#61a5fa] text-white rounded-xl font-semibold hover:bg-blue-500 shadow-lg shadow-[#61a5fa]/25 transition-all"
+          >
+            {showCreateForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {showCreateForm ? 'Cerrar' : 'Registrar inversion'}
+          </button>
+        )}
       </div>
+
+      {!isReadonlyAdmin && showCreateForm && (
+        <form onSubmit={createInvestment} className="mb-6 bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Usuario</label>
+              <select
+                required
+                value={createForm.userId}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, userId: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
+              >
+                <option value="">Selecciona un usuario</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.fullName} {user.email ? `(${user.email})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Proyecto</label>
+              <select
+                required
+                value={createForm.projectId}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, projectId: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
+              >
+                <option value="">Selecciona un proyecto</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Monto</label>
+              <input
+                type="number"
+                min={1}
+                required
+                value={createForm.amount}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, amount: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Retorno estimado (%)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={createForm.expectedReturnPct}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, expectedReturnPct: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Ganancia estimada</label>
+              <input
+                type="number"
+                step="0.01"
+                value={createForm.expectedProfitAmount}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({ ...prev, expectedProfitAmount: e.target.value }))
+                }
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Total estimado</label>
+              <input
+                type="number"
+                step="0.01"
+                value={createForm.expectedTotalAmount}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({ ...prev, expectedTotalAmount: e.target.value }))
+                }
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={creating}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#61a5fa] text-white rounded-xl font-semibold hover:bg-blue-500 transition-all disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+              {creating ? 'Registrando...' : 'Registrar inversion'}
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         <div className="p-4 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
@@ -167,9 +357,10 @@ export default function AdminInvestmentsPage() {
                         {inv._count.payments}
                       </td>
                       <td className="px-6 py-4">
-                        {transitions.length > 0 ? (
+                        {!isReadonlyAdmin && transitions.length > 0 ? (
                           <div className="relative">
                             <select
+                              disabled={savingId === inv.id}
                               onChange={(e) => {
                                 if (e.target.value) changeStatus(inv, e.target.value);
                                 e.target.value = '';
@@ -189,7 +380,7 @@ export default function AdminInvestmentsPage() {
                             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-400">—</span>
+                          <span className="text-xs text-gray-400">{isReadonlyAdmin ? 'Solo lectura' : '—'}</span>
                         )}
                       </td>
                     </tr>

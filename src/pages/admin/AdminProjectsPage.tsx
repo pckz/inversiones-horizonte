@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Pencil, Trash2, Eye, EyeOff, FileText } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Project {
   id: string;
@@ -24,6 +25,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 export default function AdminProjectsPage() {
+  const { isReadonlyAdmin } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -45,6 +47,7 @@ export default function AdminProjectsPage() {
   }
 
   async function togglePublic(project: Project) {
+    if (isReadonlyAdmin) return;
     try {
       await api.patch(`/projects/${project.id}`, { isPublic: !project.isPublic });
       setProjects((prev) =>
@@ -56,6 +59,7 @@ export default function AdminProjectsPage() {
   }
 
   async function deleteProject(id: string) {
+    if (isReadonlyAdmin) return;
     if (!confirm('Estas seguro de eliminar esta propiedad?')) return;
     try {
       await api.delete(`/projects/${id}`);
@@ -79,13 +83,15 @@ export default function AdminProjectsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Propiedades</h1>
           <p className="text-gray-500 mt-1">Gestiona los proyectos de inversion</p>
         </div>
-        <Link
-          to="/admin/propiedades/nuevo"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#61a5fa] text-white rounded-xl font-semibold hover:bg-blue-500 shadow-lg shadow-[#61a5fa]/25 transition-all"
-        >
-          <Plus className="w-5 h-5" />
-          Nueva propiedad
-        </Link>
+        {!isReadonlyAdmin && (
+          <Link
+            to="/admin/propiedades/nuevo"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#61a5fa] text-white rounded-xl font-semibold hover:bg-blue-500 shadow-lg shadow-[#61a5fa]/25 transition-all"
+          >
+            <Plus className="w-5 h-5" />
+            Nueva propiedad
+          </Link>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
@@ -170,20 +176,24 @@ export default function AdminProjectsPage() {
                         {project._count.investments}
                       </td>
                       <td className="px-6 py-4">
-                        <button
-                          onClick={() => togglePublic(project)}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            project.isPublic
-                              ? 'text-emerald-600 hover:bg-emerald-50'
-                              : 'text-gray-400 hover:bg-gray-100'
-                          }`}
-                        >
-                          {project.isPublic ? (
-                            <Eye className="w-4 h-4" />
-                          ) : (
-                            <EyeOff className="w-4 h-4" />
-                          )}
-                        </button>
+                        {isReadonlyAdmin ? (
+                          <span className="text-xs text-gray-400">Solo lectura</span>
+                        ) : (
+                          <button
+                            onClick={() => togglePublic(project)}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              project.isPublic
+                                ? 'text-emerald-600 hover:bg-emerald-50'
+                                : 'text-gray-400 hover:bg-gray-100'
+                            }`}
+                          >
+                            {project.isPublic ? (
+                              <Eye className="w-4 h-4" />
+                            ) : (
+                              <EyeOff className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1">
@@ -197,20 +207,24 @@ export default function AdminProjectsPage() {
                               <span className="sr-only">{project._count.posts}</span>
                             )}
                           </Link>
-                          <Link
-                            to={`/admin/propiedades/${project.id}`}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-[#61a5fa] hover:bg-blue-50 transition-colors"
-                            title="Editar"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Link>
-                          <button
-                            onClick={() => deleteProject(project.id)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {!isReadonlyAdmin && (
+                            <Link
+                              to={`/admin/propiedades/${project.id}`}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-[#61a5fa] hover:bg-blue-50 transition-colors"
+                              title="Editar"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Link>
+                          )}
+                          {!isReadonlyAdmin && (
+                            <button
+                              onClick={() => deleteProject(project.id)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, Home } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -13,13 +13,19 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const { user, login, register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl');
 
   useEffect(() => {
     if (user) {
-      const dest = user.role === 'admin' || user.role === 'readonly_admin' ? '/admin' : '/cuenta';
-      navigate(dest, { replace: true });
+      if (returnUrl) {
+        navigate(returnUrl, { replace: true });
+      } else {
+        const dest = user.role === 'admin' || user.role === 'readonly_admin' ? '/admin' : '/cuenta';
+        navigate(dest, { replace: true });
+      }
     }
-  }, [user, navigate]);
+  }, [user, navigate, returnUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

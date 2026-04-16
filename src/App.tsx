@@ -25,6 +25,8 @@ import AdminPostsPage from './pages/admin/AdminPostsPage';
 import AdminPostEditorPage from './pages/admin/AdminPostEditorPage';
 import AdminPostPreviewPage from './pages/admin/AdminPostPreviewPage';
 import AdminUserDetailPage from './pages/admin/AdminUserDetailPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import AgendarPage from './pages/AgendarPage';
 
 function ScrollToAnchor() {
   const location = useLocation();
@@ -67,6 +69,7 @@ function PublicLayout() {
           <Route path="/" element={<HomePage />} />
           <Route path="/proyectos" element={<MarketplacePage />} />
           <Route path="/proyectos/:slug" element={<ProjectDetailPage />} />
+          <Route path="/agendar" element={<AgendarPage />} />
           <Route path="/nosotros" element={<AboutPage />} />
         </Routes>
       </main>
@@ -118,6 +121,7 @@ export default function App() {
             <Route path="propiedades/:projectId/posts/:postId/preview" element={<AdminPostPreviewPage />} />
             <Route path="inversiones" element={<AdminInvestmentsPage />} />
             <Route path="pagos" element={<AdminPaymentsPage />} />
+            <Route path="preferencias" element={<AdminSettingsPage />} />
           </Route>
 
           <Route path="/*" element={<PublicLayout />} />

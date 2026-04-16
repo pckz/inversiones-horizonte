@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Eye, Edit3, Trash2, Paperclip } from 'lucide-react';
 import { api } from '../../lib/api';
 import FileUpload from '../../components/ui/FileUpload';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Attachment {
   id?: string;
@@ -13,6 +14,7 @@ interface Attachment {
 }
 
 export default function AdminPostEditorPage() {
+  const { isReadonlyAdmin } = useAuth();
   const { projectId, postId } = useParams();
   const navigate = useNavigate();
   const isEdit = !!postId;
@@ -57,10 +59,12 @@ export default function AdminPostEditorPage() {
   }
 
   async function handleInsertImage() {
+    if (isReadonlyAdmin) return;
     imgInputRef.current?.click();
   }
 
   async function onImageFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    if (isReadonlyAdmin) return;
     const file = e.target.files?.[0];
     if (!file) return;
     try {
@@ -73,6 +77,7 @@ export default function AdminPostEditorPage() {
   }
 
   async function handleAddAttachment(e: React.ChangeEvent<HTMLInputElement>) {
+    if (isReadonlyAdmin) return;
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingAttachment(true);
@@ -91,6 +96,7 @@ export default function AdminPostEditorPage() {
   }
 
   function removeAttachment(idx: number) {
+    if (isReadonlyAdmin) return;
     setAttachments((prev) => prev.filter((_, i) => i !== idx));
   }
 
@@ -101,6 +107,7 @@ export default function AdminPostEditorPage() {
   }
 
   async function handleSave() {
+    if (isReadonlyAdmin) return;
     const body = editorRef.current?.innerHTML ?? '';
     if (!title.trim() || !body.trim()) return;
     setSaving(true);
@@ -164,16 +171,24 @@ export default function AdminPostEditorPage() {
             {preview ? <Edit3 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             {preview ? 'Editar' : 'Previsualizar'}
           </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#61a5fa] text-white rounded-xl text-sm font-semibold hover:bg-blue-500 shadow-lg shadow-[#61a5fa]/25 transition-all disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? 'Guardando...' : 'Guardar'}
-          </button>
+          {!isReadonlyAdmin && (
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#61a5fa] text-white rounded-xl text-sm font-semibold hover:bg-blue-500 shadow-lg shadow-[#61a5fa]/25 transition-all disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'Guardando...' : 'Guardar'}
+            </button>
+          )}
         </div>
       </div>
+
+      {isReadonlyAdmin && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl px-4 py-3 text-sm">
+          Este perfil solo puede revisar publicaciones. La edicion y la creacion estan deshabilitadas.
+        </div>
+      )}
 
       {preview ? (
         <article className="bg-white rounded-2xl border border-gray-100 p-8 prose prose-sm max-w-none">
@@ -205,38 +220,46 @@ export default function AdminPostEditorPage() {
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                disabled={isReadonlyAdmin}
                 placeholder="Titulo de la publicacion"
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
               />
             </div>
-            <FileUpload
-              value={coverImage}
-              onChange={setCoverImage}
-              folder="posts"
-              accept="image/*"
-              label="Imagen de portada"
-            />
+            {!isReadonlyAdmin && (
+              <FileUpload
+                value={coverImage}
+                onChange={setCoverImage}
+                folder="posts"
+                accept="image/*"
+                label="Imagen de portada"
+              />
+            )}
+            {isReadonlyAdmin && coverImage && (
+              <img src={coverImage} alt={title} className="w-full h-40 object-cover rounded-xl border border-gray-200" />
+            )}
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <div className="flex items-center gap-1 px-4 py-2 border-b border-gray-100 bg-gray-50 flex-wrap">
-              <button type="button" onClick={() => execCmd('bold')} className="px-2.5 py-1.5 rounded text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors">B</button>
-              <button type="button" onClick={() => execCmd('italic')} className="px-2.5 py-1.5 rounded text-sm italic text-gray-600 hover:bg-gray-200 transition-colors">I</button>
-              <button type="button" onClick={() => execCmd('underline')} className="px-2.5 py-1.5 rounded text-sm underline text-gray-600 hover:bg-gray-200 transition-colors">U</button>
-              <div className="w-px h-5 bg-gray-300 mx-1" />
-              <button type="button" onClick={() => execCmd('formatBlock', 'h2')} className="px-2.5 py-1.5 rounded text-sm font-semibold text-gray-600 hover:bg-gray-200 transition-colors">H2</button>
-              <button type="button" onClick={() => execCmd('formatBlock', 'h3')} className="px-2.5 py-1.5 rounded text-sm font-semibold text-gray-600 hover:bg-gray-200 transition-colors">H3</button>
-              <button type="button" onClick={() => execCmd('formatBlock', 'p')} className="px-2.5 py-1.5 rounded text-xs text-gray-600 hover:bg-gray-200 transition-colors">Parrafo</button>
-              <div className="w-px h-5 bg-gray-300 mx-1" />
-              <button type="button" onClick={() => execCmd('insertUnorderedList')} className="px-2.5 py-1.5 rounded text-sm text-gray-600 hover:bg-gray-200 transition-colors">• Lista</button>
-              <button type="button" onClick={() => execCmd('insertOrderedList')} className="px-2.5 py-1.5 rounded text-sm text-gray-600 hover:bg-gray-200 transition-colors">1. Lista</button>
-              <div className="w-px h-5 bg-gray-300 mx-1" />
-              <button type="button" onClick={() => { const url = prompt('URL del enlace:'); if (url) execCmd('createLink', url); }} className="px-2.5 py-1.5 rounded text-sm text-[#61a5fa] hover:bg-gray-200 transition-colors">Link</button>
-              <button type="button" onClick={handleInsertImage} className="px-2.5 py-1.5 rounded text-sm text-gray-600 hover:bg-gray-200 transition-colors">Imagen</button>
-            </div>
+            {!isReadonlyAdmin && (
+              <div className="flex items-center gap-1 px-4 py-2 border-b border-gray-100 bg-gray-50 flex-wrap">
+                <button type="button" onClick={() => execCmd('bold')} className="px-2.5 py-1.5 rounded text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors">B</button>
+                <button type="button" onClick={() => execCmd('italic')} className="px-2.5 py-1.5 rounded text-sm italic text-gray-600 hover:bg-gray-200 transition-colors">I</button>
+                <button type="button" onClick={() => execCmd('underline')} className="px-2.5 py-1.5 rounded text-sm underline text-gray-600 hover:bg-gray-200 transition-colors">U</button>
+                <div className="w-px h-5 bg-gray-300 mx-1" />
+                <button type="button" onClick={() => execCmd('formatBlock', 'h2')} className="px-2.5 py-1.5 rounded text-sm font-semibold text-gray-600 hover:bg-gray-200 transition-colors">H2</button>
+                <button type="button" onClick={() => execCmd('formatBlock', 'h3')} className="px-2.5 py-1.5 rounded text-sm font-semibold text-gray-600 hover:bg-gray-200 transition-colors">H3</button>
+                <button type="button" onClick={() => execCmd('formatBlock', 'p')} className="px-2.5 py-1.5 rounded text-xs text-gray-600 hover:bg-gray-200 transition-colors">Parrafo</button>
+                <div className="w-px h-5 bg-gray-300 mx-1" />
+                <button type="button" onClick={() => execCmd('insertUnorderedList')} className="px-2.5 py-1.5 rounded text-sm text-gray-600 hover:bg-gray-200 transition-colors">• Lista</button>
+                <button type="button" onClick={() => execCmd('insertOrderedList')} className="px-2.5 py-1.5 rounded text-sm text-gray-600 hover:bg-gray-200 transition-colors">1. Lista</button>
+                <div className="w-px h-5 bg-gray-300 mx-1" />
+                <button type="button" onClick={() => { const url = prompt('URL del enlace:'); if (url) execCmd('createLink', url); }} className="px-2.5 py-1.5 rounded text-sm text-[#61a5fa] hover:bg-gray-200 transition-colors">Link</button>
+                <button type="button" onClick={handleInsertImage} className="px-2.5 py-1.5 rounded text-sm text-gray-600 hover:bg-gray-200 transition-colors">Imagen</button>
+              </div>
+            )}
             <div
               ref={editorRef}
-              contentEditable
+              contentEditable={!isReadonlyAdmin}
               className="min-h-[400px] px-6 py-4 text-sm text-gray-900 leading-relaxed focus:outline-none prose prose-sm max-w-none"
               style={{ whiteSpace: 'pre-wrap' }}
             />
@@ -251,27 +274,31 @@ export default function AdminPostEditorPage() {
                     <Paperclip className="w-4 h-4 text-gray-400 shrink-0" />
                     <span className="text-sm text-gray-700 truncate flex-1">{a.title}</span>
                     <span className="text-xs text-gray-400 shrink-0">{formatSize(a.fileSize)}</span>
-                    <button type="button" onClick={() => removeAttachment(i)} className="p-0.5 hover:bg-gray-200 rounded transition-colors">
-                      <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                    </button>
+                    {!isReadonlyAdmin && (
+                      <button type="button" onClick={() => removeAttachment(i)} className="p-0.5 hover:bg-gray-200 rounded transition-colors">
+                        <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
             )}
-            <label className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-[#61a5fa] hover:text-[#61a5fa] hover:bg-blue-50/30 transition-all cursor-pointer">
-              {uploadingAttachment ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-[#61a5fa] border-t-transparent rounded-full animate-spin" />
-                  Subiendo...
-                </>
-              ) : (
-                <>
-                  <Paperclip className="w-4 h-4" />
-                  Agregar documento
-                </>
-              )}
-              <input type="file" onChange={handleAddAttachment} className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.jpg,.jpeg,.png" />
-            </label>
+            {!isReadonlyAdmin && (
+              <label className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-[#61a5fa] hover:text-[#61a5fa] hover:bg-blue-50/30 transition-all cursor-pointer">
+                {uploadingAttachment ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-[#61a5fa] border-t-transparent rounded-full animate-spin" />
+                    Subiendo...
+                  </>
+                ) : (
+                  <>
+                    <Paperclip className="w-4 h-4" />
+                    Agregar documento
+                  </>
+                )}
+                <input type="file" onChange={handleAddAttachment} className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.jpg,.jpeg,.png" />
+              </label>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-100 p-6">
@@ -280,6 +307,7 @@ export default function AdminPostEditorPage() {
                 type="checkbox"
                 checked={isPublished}
                 onChange={(e) => setIsPublished(e.target.checked)}
+                disabled={isReadonlyAdmin}
                 className="w-5 h-5 rounded border-gray-300 text-[#61a5fa] focus:ring-[#61a5fa]"
               />
               <div>
