@@ -61,7 +61,7 @@ interface UserDetail {
 }
 
 const INVESTMENT_STATUS: Record<string, { label: string; color: string }> = {
-  pending: { label: 'Pendiente', color: 'bg-gray-100 text-gray-600' },
+  pending: { label: 'Esperando transferencia', color: 'bg-yellow-100 text-yellow-700' },
   transfer_pending: { label: 'Esperando transferencia', color: 'bg-yellow-100 text-yellow-700' },
   transfer_review: { label: 'En revision', color: 'bg-blue-100 text-blue-700' },
   signed: { label: 'Firmada', color: 'bg-indigo-100 text-indigo-700' },
@@ -134,12 +134,14 @@ export default function AdminUserDetailPage() {
     );
   }
 
-  const totalInvested = user.investments
-    .filter((i) => !['cancelled'].includes(i.status))
+  const confirmedInvestments = user.investments.filter((i) => ['signed', 'active', 'completed'].includes(i.status));
+  const pendingInvestments = user.investments.filter((i) =>
+    ['pending', 'transfer_pending', 'transfer_review'].includes(i.status),
+  );
+  const totalInvested = confirmedInvestments
     .reduce((sum, i) => sum + Number(i.amount), 0);
-  const activeInvestments = user.investments.filter((i) => i.status === 'active').length;
-  const totalExpectedProfit = user.investments
-    .filter((i) => !['cancelled'].includes(i.status))
+  const activeInvestments = confirmedInvestments.filter((i) => i.status === 'active').length;
+  const totalExpectedProfit = confirmedInvestments
     .reduce((sum, i) => sum + Number(i.expectedProfitAmount ?? 0), 0);
 
   return (
@@ -237,15 +239,19 @@ export default function AdminUserDetailPage() {
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Resumen de inversiones</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Total inversiones</span>
-                  <span className="text-sm font-semibold text-gray-900">{user.investments.length}</span>
+                  <span className="text-sm text-gray-500">Inversiones confirmadas</span>
+                  <span className="text-sm font-semibold text-gray-900">{confirmedInvestments.length}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">Inversiones activas</span>
                   <span className="text-sm font-semibold text-emerald-600">{activeInvestments}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Monto invertido</span>
+                  <span className="text-sm text-gray-500">Pendientes de pago</span>
+                  <span className="text-sm font-semibold text-amber-600">{pendingInvestments.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Monto confirmado</span>
                   <span className="text-sm font-semibold text-gray-900">{fmt(totalInvested)}</span>
                 </div>
                 <div className="flex items-center justify-between">

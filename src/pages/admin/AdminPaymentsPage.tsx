@@ -25,6 +25,7 @@ interface Payment {
 interface InvestmentOption {
   id: string;
   amount: number;
+  status: string;
   user: { fullName: string; email: string };
   project: { title: string };
 }
@@ -88,7 +89,11 @@ export default function AdminPaymentsPage() {
   async function loadInvestmentOptions() {
     try {
       const data = await api.get<InvestmentOption[]>('/investments/admin');
-      setInvestmentOptions(data);
+      setInvestmentOptions(
+        data.filter((investment) =>
+          ['pending', 'transfer_pending', 'transfer_review'].includes(investment.status),
+        ),
+      );
     } catch {
       setInvestmentOptions([]);
     }
@@ -148,7 +153,7 @@ export default function AdminPaymentsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pagos / Transferencias</h1>
-          <p className="text-gray-500 mt-1">Revisa y aprueba comprobantes de transferencia</p>
+          <p className="text-gray-500 mt-1">Registra pagos confirmados y revisa el historico de transferencias</p>
         </div>
         {!isReadonlyAdmin && (
           <button
@@ -157,7 +162,7 @@ export default function AdminPaymentsPage() {
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#61a5fa] text-white rounded-xl font-semibold hover:bg-blue-500 shadow-lg shadow-[#61a5fa]/25 transition-all"
           >
             {showCreateForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            {showCreateForm ? 'Cerrar' : 'Registrar pago'}
+            {showCreateForm ? 'Cerrar' : 'Confirmar pago'}
           </button>
         )}
       </div>
@@ -238,7 +243,7 @@ export default function AdminPaymentsPage() {
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#61a5fa] text-white rounded-xl font-semibold hover:bg-blue-500 transition-all disabled:opacity-50"
             >
               <Plus className="w-4 h-4" />
-              {creating ? 'Registrando...' : 'Registrar pago'}
+              {creating ? 'Confirmando...' : 'Confirmar pago'}
             </button>
           </div>
         </form>

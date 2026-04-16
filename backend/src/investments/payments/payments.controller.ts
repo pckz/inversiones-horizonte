@@ -57,8 +57,11 @@ export class PaymentsController {
   @Post('admin')
   @UseGuards(RolesGuard)
   @Roles('admin' as any)
-  createAdmin(@Body() dto: CreatePaymentDto) {
-    return this.payments.create(dto);
+  createAdmin(
+    @Body() dto: CreatePaymentDto,
+    @CurrentUser('sub') reviewerId: string,
+  ) {
+    return this.payments.createAdmin(dto, reviewerId);
   }
 
   @Patch(':id/review')

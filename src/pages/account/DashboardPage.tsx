@@ -28,7 +28,7 @@ interface Investment {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending: { label: 'Pendiente', color: 'bg-gray-100 text-gray-600' },
+  pending: { label: 'Esperando transferencia', color: 'bg-blue-100 text-blue-700' },
   transfer_pending: { label: 'Esperando transferencia', color: 'bg-blue-100 text-blue-700' },
   transfer_review: { label: 'En revision', color: 'bg-blue-100 text-blue-700' },
   signed: { label: 'Firmada', color: 'bg-indigo-100 text-indigo-700' },
@@ -36,6 +36,9 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   completed: { label: 'Completada', color: 'bg-purple-100 text-purple-700' },
   cancelled: { label: 'Cancelada', color: 'bg-red-100 text-red-700' },
 };
+
+const CONFIRMED_STATUSES = new Set(['signed', 'active', 'completed']);
+const PENDING_STATUSES = new Set(['pending', 'transfer_pending', 'transfer_review']);
 
 function computeProgress(startDate: string | null, projectedEndDate: string | null, status: string): number {
   if (status === 'terminado') return 100;
@@ -63,10 +66,30 @@ export default function DashboardPage() {
   const fmtDate = (d: string) =>
     new Date(d).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' });
 
-  const nonCancelled = useMemo(() => investments.filter((i) => i.status !== 'cancelled'), [investments]);
-  const totalInvested = useMemo(() => nonCancelled.reduce((s, i) => s + Number(i.amount), 0), [nonCancelled]);
-  const totalProfit = useMemo(() => nonCancelled.reduce((s, i) => s + Number(i.expectedProfitAmount ?? 0), 0), [nonCancelled]);
-  const activeCount = useMemo(() => investments.filter((i) => i.status === 'active').length, [investments]);
+  const confirmedInvestments = useMemo(
+    () => investments.filter((i) => CONFIRMED_STATUSES.has(i.status)),
+    [investments],
+  );
+  const pendingInvestments = useMemo(
+    () => investments.filter((i) => PENDING_STATUSES.has(i.status)),
+    [investments],
+  );
+  const visibleInvestments = useMemo(
+    () => (confirmedInvestments.length > 0 ? confirmedInvestments : pendingInvestments),
+    [confirmedInvestments, pendingInvestments],
+  );
+  const totalInvested = useMemo(
+    () => confirmedInvestments.reduce((s, i) => s + Number(i.amount), 0),
+    [confirmedInvestments],
+  );
+  const totalProfit = useMemo(
+    () => confirmedInvestments.reduce((s, i) => s + Number(i.expectedProfitAmount ?? 0), 0),
+    [confirmedInvestments],
+  );
+  const activeCount = useMemo(
+    () => confirmedInvestments.filter((i) => i.status !== 'completed').length,
+    [confirmedInvestments],
+  );
 
   const recentPayments = useMemo(() => {
     return investments
@@ -76,10 +99,10 @@ export default function DashboardPage() {
   }, [investments]);
 
   const stats = [
-    { label: 'Total invertido', value: fmt(totalInvested), icon: DollarSign, color: 'bg-brand-50 text-brand-600' },
+    { label: 'Total confirmado', value: fmt(totalInvested), icon: DollarSign, color: 'bg-brand-50 text-brand-600' },
     { label: 'Ganancia estimada', value: totalProfit > 0 ? `+${fmt(totalProfit)}` : '$0', icon: TrendingUp, color: 'bg-success-50 text-success-600' },
     { label: 'Proyectos activos', value: String(activeCount), icon: FolderOpen, color: 'bg-blue-50 text-blue-600' },
-    { label: 'Inversiones totales', value: String(nonCancelled.length), icon: Clock, color: 'bg-amber-50 text-amber-600' },
+    { label: 'Inversiones confirmadas', value: String(confirmedInvestments.length), icon: Clock, color: 'bg-amber-50 text-amber-600' },
   ];
 
   if (loading) {
@@ -111,6 +134,12 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {pendingInvestments.length > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Tienes {pendingInvestments.length} inversion{pendingInvestments.length === 1 ? '' : 'es'} pendiente{pendingInvestments.length === 1 ? '' : 's'} de confirmacion de pago.
+        </div>
+      )}
+
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Mis Proyectos</h2>
@@ -122,7 +151,7 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {nonCancelled.length === 0 ? (
+        {visibleInvestments.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
             <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">Aun no tienes inversiones</p>
@@ -132,7 +161,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {nonCancelled.slice(0, 3).map((inv) => {
+            {visibleInvestments.slice(0, 3).map((inv) => {
               const p = inv.project;
               const progress = computeProgress(p.startDate, p.projectedEndDate, p.status);
               const st = STATUS_LABELS[inv.status] ?? { label: inv.status, color: 'bg-gray-100 text-gray-600' };

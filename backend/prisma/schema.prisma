@@ -176,7 +176,7 @@ model Investment {
   user                 User             @relation(fields: [userId], references: [id])
 
   amount               Decimal          @db.Decimal(14, 2)
-  status               InvestmentStatus @default(pending)
+  status               InvestmentStatus @default(transfer_pending)
 
   expectedReturnPct    Decimal?         @map("expected_return_pct") @db.Decimal(5, 2)
   expectedProfitAmount Decimal?         @map("expected_profit_amount") @db.Decimal(14, 2)

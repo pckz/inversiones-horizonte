@@ -4,6 +4,8 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import slugify from 'slugify';
 
+const CONFIRMED_INVESTMENT_STATUSES = ['signed', 'active', 'completed'] as const;
+
 function computeProjectFields(project: any) {
   if (!project) return project;
 
@@ -35,6 +37,39 @@ function computeProjectFields(project: any) {
 export class ProjectsService {
   constructor(private prisma: PrismaService) {}
 
+  private async attachRaisedAmounts<T extends { id: string; raisedAmount: unknown }>(projects: T[]) {
+    if (projects.length === 0) return projects;
+
+    const investments = await this.prisma.investment.findMany({
+      where: {
+        projectId: { in: projects.map((project) => project.id) },
+        status: { in: [...CONFIRMED_INVESTMENT_STATUSES] },
+      },
+      select: {
+        projectId: true,
+        amount: true,
+      },
+    });
+
+    const totals = new Map<string, number>();
+    for (const investment of investments) {
+      totals.set(
+        investment.projectId,
+        (totals.get(investment.projectId) ?? 0) + Number(investment.amount),
+      );
+    }
+
+    return projects.map((project) => ({
+      ...project,
+      raisedAmount: totals.get(project.id) ?? 0,
+    }));
+  }
+
+  private async attachRaisedAmount<T extends { id: string; raisedAmount: unknown }>(project: T) {
+    const [withRaisedAmount] = await this.attachRaisedAmounts([project]);
+    return withRaisedAmount;
+  }
+
   async create(dto: CreateProjectDto, userId: string) {
     const slug = slugify(dto.title, { lower: true, strict: true });
     return this.prisma.project.create({
@@ -53,7 +88,7 @@ export class ProjectsService {
       where: { isPublic: true },
       orderBy: { createdAt: 'desc' },
     });
-    return projects.map(computeProjectFields);
+    return (await this.attachRaisedAmounts(projects)).map(computeProjectFields);
   }
 
   async findAllAdmin() {
@@ -64,7 +99,7 @@ export class ProjectsService {
         _count: { select: { investments: true, posts: true } },
       },
     });
-    return projects.map(computeProjectFields);
+    return (await this.attachRaisedAmounts(projects)).map(computeProjectFields);
   }
 
   async findBySlug(slug: string) {
@@ -77,7 +112,7 @@ export class ProjectsService {
       },
     });
     if (!project) throw new NotFoundException('Project not found');
-    return computeProjectFields(project);
+    return computeProjectFields(await this.attachRaisedAmount(project));
   }
 
   async findById(id: string) {
@@ -91,7 +126,7 @@ export class ProjectsService {
       },
     });
     if (!project) throw new NotFoundException('Project not found');
-    return computeProjectFields(project);
+    return computeProjectFields(await this.attachRaisedAmount(project));
   }
 
   async update(id: string, dto: UpdateProjectDto) {
@@ -117,11 +152,18 @@ export class ProjectsService {
   }
 
   async getStats() {
-    const [total, active, totalRaised] = await Promise.all([
+    const [total, active, confirmedInvestments] = await Promise.all([
       this.prisma.project.count(),
       this.prisma.project.count({ where: { status: { in: ['por_financiarse', 'en_ejecucion'] } } }),
-      this.prisma.project.aggregate({ _sum: { raisedAmount: true } }),
+      this.prisma.investment.findMany({
+        where: { status: { in: [...CONFIRMED_INVESTMENT_STATUSES] } },
+        select: { amount: true },
+      }),
     ]);
-    return { total, active, totalRaised: totalRaised._sum.raisedAmount ?? 0 };
+    const totalRaised = confirmedInvestments.reduce(
+      (sum, investment) => sum + Number(investment.amount),
+      0,
+    );
+    return { total, active, totalRaised };
   }
 }

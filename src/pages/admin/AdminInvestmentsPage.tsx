@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, ChevronDown, Plus, X } from 'lucide-react';
+import { Search, ChevronDown, Plus, X, Check, Trash2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -12,6 +12,7 @@ interface Investment {
   adminNotes: string | null;
   user: { fullName: string; email: string };
   project: { title: string; slug: string };
+  payments: { id: string; status: string }[];
   _count: { payments: number };
 }
 
@@ -32,21 +33,13 @@ interface CreateInvestmentForm {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending: { label: 'Pendiente', color: 'bg-gray-100 text-gray-600' },
+  pending: { label: 'Esperando transferencia', color: 'bg-blue-100 text-blue-700' },
   transfer_pending: { label: 'Esperando transferencia', color: 'bg-blue-100 text-blue-700' },
   transfer_review: { label: 'En revision', color: 'bg-blue-100 text-blue-700' },
   signed: { label: 'Firmada', color: 'bg-indigo-100 text-indigo-700' },
   active: { label: 'Activa', color: 'bg-emerald-100 text-emerald-700' },
   completed: { label: 'Completada', color: 'bg-purple-100 text-purple-700' },
   cancelled: { label: 'Cancelada', color: 'bg-red-100 text-red-700' },
-};
-
-const TRANSITIONS: Record<string, string[]> = {
-  pending: ['transfer_pending', 'cancelled'],
-  transfer_pending: ['transfer_review', 'cancelled'],
-  transfer_review: ['signed', 'transfer_pending', 'cancelled'],
-  signed: ['active', 'cancelled'],
-  active: ['completed'],
 };
 
 const EMPTY_FORM: CreateInvestmentForm = {
@@ -57,6 +50,9 @@ const EMPTY_FORM: CreateInvestmentForm = {
   expectedProfitAmount: '',
   expectedTotalAmount: '',
 };
+
+const CONFIRMABLE_STATUSES = new Set(['pending', 'transfer_pending', 'transfer_review']);
+const CONFIRMED_STATUSES = new Set(['signed', 'active', 'completed']);
 
 export default function AdminInvestmentsPage() {
   const { isReadonlyAdmin } = useAuth();
@@ -104,14 +100,38 @@ export default function AdminInvestmentsPage() {
     }
   }
 
-  async function changeStatus(inv: Investment, newStatus: string) {
+  async function confirmPayment(inv: Investment) {
     if (isReadonlyAdmin) return;
     try {
       setSavingId(inv.id);
-      await api.patch(`/investments/${inv.id}/status`, { status: newStatus });
+      await api.post(`/investments/${inv.id}/confirm-payment`, {});
       setInvestments((prev) =>
-        prev.map((i) => (i.id === inv.id ? { ...i, status: newStatus } : i)),
+        prev.map((i) =>
+          i.id === inv.id
+            ? {
+                ...i,
+                status: 'active',
+                approvedAt: new Date().toISOString(),
+                payments: [...i.payments, { id: `tmp-${i.id}`, status: 'approved' }],
+                _count: { ...i._count, payments: i._count.payments + 1 },
+              }
+            : i,
+        ),
       );
+    } catch {
+      // handle error
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function cancelInvestment(inv: Investment) {
+    if (isReadonlyAdmin) return;
+    if (!confirm('Esta accion eliminara la inversion pendiente del usuario.')) return;
+    try {
+      setSavingId(inv.id);
+      await api.delete(`/investments/${inv.id}`);
+      setInvestments((prev) => prev.filter((item) => item.id !== inv.id));
     } catch {
       // handle error
     } finally {
@@ -332,7 +352,8 @@ export default function AdminInvestmentsPage() {
                     label: inv.status,
                     color: 'bg-gray-100 text-gray-600',
                   };
-                  const transitions = TRANSITIONS[inv.status] ?? [];
+                  const isConfirmable = CONFIRMABLE_STATUSES.has(inv.status);
+                  const isConfirmed = CONFIRMED_STATUSES.has(inv.status);
                   return (
                     <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4">
@@ -357,28 +378,27 @@ export default function AdminInvestmentsPage() {
                         {inv._count.payments}
                       </td>
                       <td className="px-6 py-4">
-                        {!isReadonlyAdmin && transitions.length > 0 ? (
-                          <div className="relative">
-                            <select
+                        {!isReadonlyAdmin && isConfirmable ? (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                              onClick={() => confirmPayment(inv)}
                               disabled={savingId === inv.id}
-                              onChange={(e) => {
-                                if (e.target.value) changeStatus(inv, e.target.value);
-                                e.target.value = '';
-                              }}
-                              defaultValue=""
-                              className="appearance-none pl-3 pr-8 py-1.5 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#61a5fa]/20 focus:border-[#61a5fa]"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50"
                             >
-                              <option value="" disabled>
-                                Cambiar...
-                              </option>
-                              {transitions.map((t) => (
-                                <option key={t} value={t}>
-                                  {STATUS_LABELS[t]?.label ?? t}
-                                </option>
-                              ))}
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                              <Check className="w-3.5 h-3.5" />
+                              Confirmar pago
+                            </button>
+                            <button
+                              onClick={() => cancelInvestment(inv)}
+                              disabled={savingId === inv.id}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-red-600 hover:bg-red-50 text-xs font-medium transition-colors disabled:opacity-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Cancelar
+                            </button>
                           </div>
+                        ) : isConfirmed ? (
+                          <span className="text-xs font-medium text-emerald-600">Pago confirmado</span>
                         ) : (
                           <span className="text-xs text-gray-400">{isReadonlyAdmin ? 'Solo lectura' : '—'}</span>
                         )}

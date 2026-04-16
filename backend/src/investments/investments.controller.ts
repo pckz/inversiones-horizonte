@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   UseGuards,
@@ -12,6 +13,7 @@ import { InvestmentsService } from './investments.service';
 import { CreateAdminInvestmentDto } from './dto/create-admin-investment.dto';
 import { CreateInvestmentDto } from './dto/create-investment.dto';
 import { UpdateInvestmentStatusDto } from './dto/update-investment-status.dto';
+import { PaymentsService } from './payments/payments.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -20,7 +22,10 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 @Controller('investments')
 @UseGuards(JwtAuthGuard)
 export class InvestmentsController {
-  constructor(private investments: InvestmentsService) {}
+  constructor(
+    private investments: InvestmentsService,
+    private payments: PaymentsService,
+  ) {}
 
   @Get('admin')
   @UseGuards(RolesGuard)
@@ -68,5 +73,22 @@ export class InvestmentsController {
     @Body() dto: UpdateInvestmentStatusDto,
   ) {
     return this.investments.updateStatus(id, dto.status, dto.adminNotes);
+  }
+
+  @Post(':id/confirm-payment')
+  @UseGuards(RolesGuard)
+  @Roles('admin' as any)
+  confirmPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') reviewerId: string,
+  ) {
+    return this.payments.confirmInvestmentByAdmin(id, reviewerId);
+  }
+
+  @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('admin' as any)
+  delete(@Param('id', ParseUUIDPipe) id: string) {
+    return this.investments.cancelPending(id);
   }
 }

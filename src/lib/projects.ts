@@ -8,6 +8,15 @@ const STATUS_LABELS: Record<string, string> = {
   terminado: 'Finalizado',
 };
 
+const INVESTABLE_PROJECT_STATUSES = new Set(['En financiamiento', 'Financiando']);
+const STATUS_SORT_ORDER: Record<string, number> = {
+  'En financiamiento': 0,
+  Financiando: 0,
+  Financiado: 1,
+  'En ejecución': 2,
+  Finalizado: 3,
+};
+
 function mapProject(raw: any): Project {
   return {
     id: raw.id,
@@ -30,6 +39,18 @@ function mapProject(raw: any): Project {
   };
 }
 
+export function isProjectInvestable(project: Pick<Project, 'status'>): boolean {
+  return INVESTABLE_PROJECT_STATUSES.has(project.status);
+}
+
+function sortProjectsByAvailability(projects: Project[]): Project[] {
+  return [...projects].sort((a, b) => {
+    const statusOrderDiff = (STATUS_SORT_ORDER[a.status] ?? 99) - (STATUS_SORT_ORDER[b.status] ?? 99);
+    if (statusOrderDiff !== 0) return statusOrderDiff;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+}
+
 const FEATURED_STATUSES = new Set(['En financiamiento', 'Financiado', 'Finalizado']);
 
 export async function fetchProjects(): Promise<Project[]> {
@@ -39,17 +60,12 @@ export async function fetchProjects(): Promise<Project[]> {
 
 export async function fetchFeaturedProjects(): Promise<Project[]> {
   const all = await fetchProjects();
-  return all
-    .filter((p) => FEATURED_STATUSES.has(p.status))
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 3);
+  return sortProjectsByAvailability(all.filter((p) => FEATURED_STATUSES.has(p.status))).slice(0, 3);
 }
 
 export async function fetchFilteredProjects(status: string): Promise<Project[]> {
   const all = await fetchProjects();
-  const sorted = all.sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  );
+  const sorted = sortProjectsByAvailability(all);
   if (status === 'Todos' || !status) return sorted;
   return sorted.filter((p) => p.status === status);
 }

@@ -70,7 +70,7 @@ interface InvestmentDetail {
 }
 
 const INV_STATUS: Record<string, { label: string; color: string }> = {
-  pending: { label: 'Pendiente', color: 'bg-gray-100 text-gray-600' },
+  pending: { label: 'Esperando transferencia', color: 'bg-yellow-100 text-yellow-700' },
   transfer_pending: { label: 'Esperando transferencia', color: 'bg-yellow-100 text-yellow-700' },
   transfer_review: { label: 'En revision', color: 'bg-blue-100 text-blue-700' },
   signed: { label: 'Firmada', color: 'bg-indigo-100 text-indigo-700' },

@@ -109,9 +109,9 @@ export default function AdminDashboardPage() {
           color="bg-blue-50 text-blue-500"
         />
         <StatCard
-          label="Pagos por revisar"
-          value={stats?.payments.pending ?? 0}
-          sub={`${stats?.payments.approved ?? 0} aprobados`}
+          label="Pagos registrados"
+          value={stats?.payments.total ?? 0}
+          sub={`${stats?.payments.pending ?? 0} por revisar`}
           icon={Receipt}
           href="/admin/pagos"
           color="bg-purple-50 text-purple-600"
@@ -128,11 +128,11 @@ export default function AdminDashboardPage() {
             <p className="text-sm text-gray-500 mt-1">Total recaudado en todos los proyectos</p>
           </div>
           <div className="bg-white rounded-2xl p-6 border border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Inversiones activas</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Capital confirmado</h2>
             <p className="text-3xl font-bold text-blue-500">
               {fmt(Number(stats.investments.totalAmount))}
             </p>
-            <p className="text-sm text-gray-500 mt-1">Monto total comprometido</p>
+            <p className="text-sm text-gray-500 mt-1">{stats.investments.active} inversiones activas con pago confirmado</p>
           </div>
         </div>
       )}

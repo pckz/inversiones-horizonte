@@ -4,6 +4,9 @@ import { MailService } from '../mail/mail.service';
 import { InvestmentStatus } from '@prisma/client';
 import { CreateInvestmentDto } from './dto/create-investment.dto';
 
+const CONFIRMED_INVESTMENT_STATUSES: InvestmentStatus[] = ['signed', 'active', 'completed'];
+const PENDING_INVESTMENT_STATUSES: InvestmentStatus[] = ['pending', 'transfer_pending', 'transfer_review'];
+
 const VALID_TRANSITIONS: Record<InvestmentStatus, InvestmentStatus[]> = {
   pending: ['transfer_pending', 'cancelled'],
   transfer_pending: ['transfer_review', 'cancelled'],
@@ -27,6 +30,7 @@ export class InvestmentsService {
         projectId: dto.projectId,
         userId,
         amount: dto.amount,
+        status: 'transfer_pending',
         expectedReturnPct: dto.expectedReturnPct,
         expectedProfitAmount: dto.expectedProfitAmount,
         expectedTotalAmount: dto.expectedTotalAmount,
@@ -71,6 +75,13 @@ export class InvestmentsService {
       include: {
         user: { select: { fullName: true, email: true } },
         project: { select: { title: true, slug: true } },
+        payments: {
+          select: {
+            id: true,
+            status: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
         _count: { select: { payments: true } },
       },
     });
@@ -154,12 +165,39 @@ export class InvestmentsService {
     return updated;
   }
 
+  async cancelPending(id: string) {
+    const investment = await this.prisma.investment.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (!investment) {
+      throw new NotFoundException('Investment not found');
+    }
+
+    if (!PENDING_INVESTMENT_STATUSES.includes(investment.status)) {
+      throw new BadRequestException('Only pending investments can be deleted');
+    }
+
+    await this.prisma.investment.delete({
+      where: { id },
+    });
+
+    return { success: true };
+  }
+
   async getStats() {
     const [total, pending, active, totalAmount] = await Promise.all([
       this.prisma.investment.count(),
-      this.prisma.investment.count({ where: { status: { in: ['pending', 'transfer_pending', 'transfer_review'] } } }),
+      this.prisma.investment.count({ where: { status: { in: PENDING_INVESTMENT_STATUSES } } }),
       this.prisma.investment.count({ where: { status: 'active' } }),
-      this.prisma.investment.aggregate({ _sum: { amount: true } }),
+      this.prisma.investment.aggregate({
+        where: { status: { in: CONFIRMED_INVESTMENT_STATUSES } },
+        _sum: { amount: true },
+      }),
     ]);
     return { total, pending, active, totalAmount: totalAmount._sum.amount ?? 0 };
   }
